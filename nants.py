@@ -17,22 +17,20 @@ class Ant(pg.sprite.Sprite):
         super().__init__()
         self.drawSurf = drawSurf
         self.nest = nest
-        #self.image = pg.img.load("ant.png").convert_alpha()
-        self.image = pg.Surface((12, 21))#, pg.HWSURFACE | pg.SRCALPHA)
+        self.image = pg.Surface((12, 21))#, pg.HWSURFACE)
         self.image.set_colorkey(0)
         cBrown = (64,32,32)
+        # Draw Ant
         pg.draw.aaline(self.image, cBrown, [0, 5], [11, 15])
         pg.draw.aaline(self.image, cBrown, [0, 15], [11, 5]) # legs
         pg.draw.aaline(self.image, cBrown, [0, 10], [12, 10])
-        pg.draw.aaline(self.image, cBrown, [2, 0], [4, 3]) #3 antena l
-        pg.draw.aaline(self.image, cBrown, [9, 0], [7, 3]) #8 antena r
+        pg.draw.aaline(self.image, cBrown, [2, 0], [4, 3]) # antena l
+        pg.draw.aaline(self.image, cBrown, [9, 0], [7, 3]) # antena r
         pg.draw.ellipse(self.image, cBrown, [3, 2, 6, 6]) # head
         pg.draw.ellipse(self.image, cBrown, [4, 6, 4, 9]) # body
         pg.draw.ellipse(self.image, cBrown, [3, 13, 6, 8]) # rear
-
+        # save drawing for later
         self.orig_img = pg.transform.rotate(self.image.copy(), -90)
-        #dS_w, dS_h = self.drawSurf.get_size()
-        #self.home = (dS_w/2, dS_h/2)
         self.rect = self.image.get_rect(center=self.nest)
         self.ang = randint(0, 360)
         self.desireDir = pg.Vector2(cos(radians(self.ang)),sin(radians(self.ang)))
@@ -42,20 +40,21 @@ class Ant(pg.sprite.Sprite):
 
     def update(self, dt):  # behavior
         curW, curH = self.drawSurf.get_size()
-        accel = pg.Vector2(0,0)
-        maxSpeed = 11  # higher than 11 needs wider edge border
-        steerStr = 2
-        wandrStr = 0.15
+        mid_result = left_result = right_result = (0,0,0)
         randAng = randint(0,360)
+        accel = pg.Vector2(0,0)
+        wandrStr = 0.15
+        maxSpeed = 11  # more than 11 may stretch pheros too much
+        steerStr = 2
+        margin = 48
 
         if self.pos.distance_to(self.last_phero) > 24: # 20-25 seems best
             pheromones.add(Trail(self.pos, 1))  # + pg.Vector2(-5, 0).rotate(self.ang) # self.groups()[0]
             self.last_phero = pg.Vector2(self.rect.center)
 
-        #fMid_sensor = (round(fMid_sensor[0]),round(fMid_sensor[1]))
+        #mid_sensr = vec2round(self.pos + pg.Vector2(20, 0).rotate(self.ang))#.normalize() # directional vec forward
         mid_sensL = vec2round(self.pos + pg.Vector2(20, -3).rotate(self.ang))
         mid_sensR = vec2round(self.pos + pg.Vector2(20, 3).rotate(self.ang))
-        #mid_sensr = vec2round(self.pos + pg.Vector2(20, 0).rotate(self.ang))#.normalize() # directional vec forward
 
         left_sensr1 = vec2round(self.pos + pg.Vector2(18, -14).rotate(self.ang))
         left_sensr2 = vec2round(self.pos + pg.Vector2(16, -21).rotate(self.ang))
@@ -70,18 +69,21 @@ class Ant(pg.sprite.Sprite):
         #pg.draw.circle(self.drawSurf, (200,0,0), right_sensr1, 1)
         #pg.draw.circle(self.drawSurf, (200,0,0), right_sensr2, 1)
 
-        ms_rL = self.drawSurf.get_at(mid_sensL)[:3]
-        ms_rR = self.drawSurf.get_at(mid_sensR)[:3]
-        mid_result = (max(ms_rL[0], ms_rR[0]), max(ms_rL[1], ms_rR[1]), max(ms_rL[2], ms_rR[2]))
-        #mid_result = self.drawSurf.get_at(mid_sensr)[:3]
+        if self.drawSurf.get_rect().collidepoint(mid_sensL) and self.drawSurf.get_rect().collidepoint(mid_sensR):
+            ms_rL = self.drawSurf.get_at(mid_sensL)[:3]
+            ms_rR = self.drawSurf.get_at(mid_sensR)[:3]
+            mid_result = (max(ms_rL[0], ms_rR[0]), max(ms_rL[1], ms_rR[1]), max(ms_rL[2], ms_rR[2]))
 
-        ls_r1 = self.drawSurf.get_at(left_sensr1)[:3]
-        ls_r2 = self.drawSurf.get_at(left_sensr2)[:3]
-        left_result = (max(ls_r1[0], ls_r2[0]), max(ls_r1[1], ls_r2[1]), max(ls_r1[2], ls_r2[2]))
+        if self.drawSurf.get_rect().collidepoint(left_sensr1) and self.drawSurf.get_rect().collidepoint(left_sensr2):
+            ls_r1 = self.drawSurf.get_at(left_sensr1)[:3]
+            ls_r2 = self.drawSurf.get_at(left_sensr2)[:3]
+            left_result = (max(ls_r1[0], ls_r2[0]), max(ls_r1[1], ls_r2[1]), max(ls_r1[2], ls_r2[2]))
 
-        rs_r1 = self.drawSurf.get_at(right_sensr1)[:3]
-        rs_r2 = self.drawSurf.get_at(right_sensr2)[:3]
-        right_result = (max(rs_r1[0], rs_r2[0]), max(rs_r1[1], rs_r2[1]), max(rs_r1[2], rs_r2[2]))
+        if self.drawSurf.get_rect().collidepoint(right_sensr1) and self.drawSurf.get_rect().collidepoint(right_sensr2):
+            rs_r1 = self.drawSurf.get_at(right_sensr1)[:3]
+            rs_r2 = self.drawSurf.get_at(right_sensr2)[:3]
+            right_result = (max(rs_r1[0], rs_r2[0]), max(rs_r1[1], rs_r2[1]), max(rs_r1[2], rs_r2[2]))
+
         #if mid_result[2] != 0 and mid_result[:2] == (0,0): print(mid_result)
 
         if mid_result[2] > max(left_result[2], right_result[2]) and mid_result[:2] == (0,0):
@@ -94,17 +96,7 @@ class Ant(pg.sprite.Sprite):
             self.desireDir = pg.Vector2(0,1).rotate(self.ang).normalize() #right
             wandrStr = 0
 
-        #self.desireDir = pg.Vector2(self.desireDir + (0,-1)).rotate(self.ang).normalize()
-        #self.desireDir = self.pos + pg.Vector2(20, -18).rotate(self.ang)
-
-        #ls_chk1 = self.drawSurf.get_rect().collidepoint(left_sensr1) and self.drawSurf.get_at(left_sensr1) == (0,0,100,255)
-        #ls_chk2 = self.drawSurf.get_rect().collidepoint(left_sensr2) and self.drawSurf.get_at(left_sensr2) == (0,0,100,255)
-        #if ls_chk1 or ls_chk2 : print("Left")
-
-        # if pixel color value [2] > blueThreshold
-
         # Avoid edges
-        margin = 64
         if min(self.pos.x, self.pos.y, curW - self.pos.x, curH - self.pos.y) < margin:
             if self.pos.x < margin : self.desireDir = pg.Vector2(self.desireDir + (1,0)).normalize()
             elif self.pos.x > curW - margin : self.desireDir = pg.Vector2(self.desireDir + (-1,0)).normalize()
@@ -131,7 +123,7 @@ class Ant(pg.sprite.Sprite):
 class Trail(pg.sprite.Sprite):
     def __init__(self, pos, phero_type):
         super().__init__()
-        self.image = pg.Surface((16, 16)) #, pg.SRCALPHA) # alphatooslow
+        self.image = pg.Surface((16, 16))
         self.image.fill(0)
         self.image.set_colorkey(0)
         #if phero_type = 1
@@ -147,7 +139,7 @@ class Trail(pg.sprite.Sprite):
             return self.kill()
         evap = self.str/500
         self.image.fill(0)
-        pg.draw.circle(self.image, [0,0,90*evap+10], [8, 8], 4) # ,155*evap+100
+        pg.draw.circle(self.image, [0,0,90*evap+10], [8, 8], 4)
 
 def vec2round(vec2):
     return (round(vec2[0]),round(vec2[1]))
@@ -173,7 +165,6 @@ def main():
 
     for n in range(ANTS):
         workers.add(Ant(screen, nest))
-    #allBoids = nBoids.sprites()
 
     clock = pg.time.Clock()
     fpsChecker = 0
@@ -189,7 +180,8 @@ def main():
         pheromones.update(dt)
         workers.update(dt)
 
-        screen.fill(0) # where this should be
+        screen.fill(0) # fill MUST be after sensors update, so previous draw is visible to them
+        
         pheromones.draw(screen)
 
         pg.draw.circle(screen, [30,10,10], (nest[0],nest[1]+6), 6, 3)
