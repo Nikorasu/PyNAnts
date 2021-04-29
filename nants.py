@@ -7,7 +7,7 @@ NAnts
 Copyright (c) 2021  Nikolaus Stromberg  nikorasu85@gmail.com
 '''
 FLLSCRN = False         # True for Fullscreen, or False for Window.
-ANTS = 5              # Number of Ants to spawn.
+ANTS = 10              # Number of Ants to spawn.
 WIDTH = 1200            # default 1200
 HEIGHT = 800            # default 800
 FPS = 48                # 48-90
@@ -20,7 +20,7 @@ class Ant(pg.sprite.Sprite):
         #self.image = pg.img.load("ant.png").convert_alpha()
         self.image = pg.Surface((12, 21))#, pg.HWSURFACE | pg.SRCALPHA)
         self.image.set_colorkey(0)
-        cBrown = (80,42,42)
+        cBrown = (64,32,32)
         pg.draw.aaline(self.image, cBrown, [0, 5], [11, 15])
         pg.draw.aaline(self.image, cBrown, [0, 15], [11, 5]) # legs
         pg.draw.aaline(self.image, cBrown, [0, 10], [12, 10])
@@ -41,15 +41,14 @@ class Ant(pg.sprite.Sprite):
         self.last_phero = nest
 
     def update(self, dt):  # behavior
-        selfCenter = pg.Vector2(self.rect.center)
         curW, curH = self.drawSurf.get_size()
         accel = pg.Vector2(0,0)
-        maxSpeed = 10
+        maxSpeed = 12
         steerStr = 2
         wandrStr = 0.16
 
-        if selfCenter.distance_to(self.last_phero) > 32:
-            self.groups()[0].add(Trail(selfCenter, 1))
+        if self.pos.distance_to(self.last_phero) > 32:
+            pheromones.add(Trail(self.pos, 1))  # + pg.Vector2(-5, 0).rotate(self.ang) # self.groups()[0]
             self.last_phero = pg.Vector2(self.rect.center)
 
 
@@ -72,7 +71,8 @@ class Ant(pg.sprite.Sprite):
         ls_result2 = self.drawSurf.get_at(left_sensr2)[:3]
         rs_result1 = self.drawSurf.get_at(right_sensr1)[:3]
         rs_result2 = self.drawSurf.get_at(right_sensr2)[:3]
-        if mids_result!= (0,0,0): print(mids_result)
+        #if mids_result!= (0,0,0): print(mids_result)
+
         #ls_chk1 = self.drawSurf.get_rect().collidepoint(left_sensr1) and self.drawSurf.get_at(left_sensr1) == (0,0,100,255)
         #ls_chk2 = self.drawSurf.get_rect().collidepoint(left_sensr2) and self.drawSurf.get_at(left_sensr2) == (0,0,100,255)
         #if ls_chk1 or ls_chk2 : print("Left")
@@ -110,7 +110,7 @@ class Trail(pg.sprite.Sprite):
         self.image.fill(0)
         self.image.set_colorkey(0)
         #if phero_type = 1
-        pg.draw.circle(self.image, [0,0,100], [8, 8], 6)
+        pg.draw.circle(self.image, [0,0,100], [8, 8], 5)
         self.img_copy = self.image.copy()
         self.rect = self.image.get_rect(center=pos)
         self.pos = pg.Vector2(self.rect.center)
@@ -120,12 +120,14 @@ class Trail(pg.sprite.Sprite):
         self.str -= 1
         evap = self.str/800
         self.image.fill(0)
-        pg.draw.circle(self.image, [0,0,80*evap+20], [8, 8], 3*evap+3)
+        pg.draw.circle(self.image, [0,0,80*evap+20], [8, 8], 2*evap+3)
         if self.str == 0:
             return self.kill()
 
 def vec2round(vec2):
     return (round(vec2[0]),round(vec2[1]))
+
+pheromones = pg.sprite.Group()
 
 def main():
     pg.init()  # prepare window
@@ -143,6 +145,7 @@ def main():
     nest = (cur_w/3, cur_h/2)
 
     workers = pg.sprite.Group()
+
     for n in range(ANTS):
         workers.add(Ant(screen, nest))
     #allBoids = nBoids.sprites()
@@ -158,16 +161,18 @@ def main():
         dt = clock.tick(FPS) / 100
         #screen.fill(0) # before update prevents get_at
 
+        pheromones.update(dt)
         workers.update(dt)
-        #pheromones.update()
 
         screen.fill(0) # where this should be
-        pg.draw.circle(screen, [40,10,10], (nest[0],nest[1]+6), 6, 3)
-        pg.draw.circle(screen, [50,20,20], (nest[0],nest[1]+4), 9, 4)
-        pg.draw.circle(screen, [60,30,30], (nest[0],nest[1]+2), 12, 4)
-        pg.draw.circle(screen, [70,40,40], nest, 16, 5)
+        pheromones.draw(screen)
+
+        pg.draw.circle(screen, [30,10,10], (nest[0],nest[1]+6), 6, 3)
+        pg.draw.circle(screen, [40,20,20], (nest[0],nest[1]+4), 9, 4)
+        pg.draw.circle(screen, [50,30,30], (nest[0],nest[1]+2), 12, 4)
+        pg.draw.circle(screen, [60,40,40], nest, 16, 5)
+
         workers.draw(screen)
-        #pheromones.draw()
 
         pg.display.update()
 
