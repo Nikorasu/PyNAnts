@@ -19,7 +19,7 @@ class Ant(pg.sprite.Sprite):
         self.nest = nest
         self.image = pg.Surface((12, 21))#, pg.HWSURFACE)
         self.image.set_colorkey(0)
-        cBrown = (64,32,32)
+        cBrown = (80,42,42)
         # Draw Ant
         pg.draw.aaline(self.image, cBrown, [0, 5], [11, 15])
         pg.draw.aaline(self.image, cBrown, [0, 15], [11, 5]) # legs
@@ -43,10 +43,10 @@ class Ant(pg.sprite.Sprite):
         mid_result = left_result = right_result = (0,0,0)
         randAng = randint(0,360)
         accel = pg.Vector2(0,0)
-        wandrStr = 0.15
+        wandrStr = .14
         maxSpeed = 11  # more than 11 may stretch pheros too much
-        steerStr = 2
-        margin = 48
+        steerStr = 3  # 2-4
+        margin = 42
 
         if self.pos.distance_to(self.last_phero) > 24: # 20-25 seems best
             pheromones.add(Trail(self.pos, 1))  # + pg.Vector2(-5, 0).rotate(self.ang) # self.groups()[0]
@@ -62,12 +62,12 @@ class Ant(pg.sprite.Sprite):
         right_sensr1 = vec2round(self.pos + pg.Vector2(18, 14).rotate(self.ang))
         right_sensr2 = vec2round(self.pos + pg.Vector2(16, 21).rotate(self.ang))
 
-        #pg.draw.circle(self.drawSurf, (200,0,0), mid_sensL, 1)
-        #pg.draw.circle(self.drawSurf, (200,0,0), mid_sensR, 1)
-        #pg.draw.circle(self.drawSurf, (200,0,0), left_sensr1, 1)
-        #pg.draw.circle(self.drawSurf, (200,0,0), left_sensr2, 1)
-        #pg.draw.circle(self.drawSurf, (200,0,0), right_sensr1, 1)
-        #pg.draw.circle(self.drawSurf, (200,0,0), right_sensr2, 1)
+        #pg.draw.circle(self.drawSurf, (200,0,200), mid_sensL, 1)
+        #pg.draw.circle(self.drawSurf, (200,0,200), mid_sensR, 1)
+        #pg.draw.circle(self.drawSurf, (200,0,200), left_sensr1, 1)
+        #pg.draw.circle(self.drawSurf, (200,0,200), left_sensr2, 1)
+        #pg.draw.circle(self.drawSurf, (200,0,200), right_sensr1, 1)
+        #pg.draw.circle(self.drawSurf, (200,0,200), right_sensr2, 1)
 
         if self.drawSurf.get_rect().collidepoint(mid_sensL) and self.drawSurf.get_rect().collidepoint(mid_sensR):
             ms_rL = self.drawSurf.get_at(mid_sensL)[:3]
@@ -90,10 +90,10 @@ class Ant(pg.sprite.Sprite):
             self.desireDir = pg.Vector2(1,0).rotate(self.ang).normalize()
             wandrStr = 0
         elif left_result[2] > right_result[2] and left_result[:2] == (0,0):
-            self.desireDir = pg.Vector2(0,-1).rotate(self.ang).normalize() #left
+            self.desireDir = pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
             wandrStr = 0
         elif right_result[2] > left_result[2] and right_result[:2] == (0,0):
-            self.desireDir = pg.Vector2(0,1).rotate(self.ang).normalize() #right
+            self.desireDir = pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
             wandrStr = 0
 
         # Avoid edges
@@ -123,15 +123,16 @@ class Ant(pg.sprite.Sprite):
 class Trail(pg.sprite.Sprite):
     def __init__(self, pos, phero_type):
         super().__init__()
+        self.type = phero_type
         self.image = pg.Surface((16, 16))
         self.image.fill(0)
         self.image.set_colorkey(0)
-        #if phero_type = 1
-        pg.draw.circle(self.image, [0,0,100], [8, 8], 4)
+        #pg.draw.circle(self.image, self.color, [8, 8], 4)
         self.img_copy = self.image.copy()
         self.rect = self.image.get_rect(center=pos)
         self.pos = pg.Vector2(self.rect.center)
         self.str = 500
+        # maybe if ontop of same color, add color to self, using surface.get_at()
 
     def update(self, dt):
         self.str -= (dt/10)*FPS
@@ -139,7 +140,8 @@ class Trail(pg.sprite.Sprite):
             return self.kill()
         evap = self.str/500
         self.image.fill(0)
-        pg.draw.circle(self.image, [0,0,90*evap+10], [8, 8], 4)
+        if self.type == 1 : pg.draw.circle(self.image, [0,0,90*evap+10], [8, 8], 4)
+        if self.type == 2 : pg.draw.circle(self.image, [0,90*evap+10,0], [8, 8], 4)
 
 def vec2round(vec2):
     return (round(vec2[0]),round(vec2[1]))
@@ -175,13 +177,13 @@ def main():
                 return
 
         dt = clock.tick(FPS) / 100
-        #screen.fill(0) # before update prevents get_at
+        #screen.fill(0) # enable this to show sensor debug spots
 
         pheromones.update(dt)
         workers.update(dt)
 
         screen.fill(0) # fill MUST be after sensors update, so previous draw is visible to them
-        
+
         pheromones.draw(screen)
 
         pg.draw.circle(screen, [30,10,10], (nest[0],nest[1]+6), 6, 3)
@@ -196,7 +198,7 @@ def main():
         fpsChecker+=1  #fpsChecker = 0  # must go before main loop
         if fpsChecker>=FPS:  # quick debug to see fps in terminal
             print(round(clock.get_fps(),2))
-            print((dt/10)*FPS)
+            #print((dt/10)*FPS)
             fpsChecker=0
 
 if __name__ == '__main__':
