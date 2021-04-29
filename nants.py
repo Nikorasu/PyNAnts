@@ -7,7 +7,7 @@ NAnts
 Copyright (c) 2021  Nikolaus Stromberg  nikorasu85@gmail.com
 '''
 FLLSCRN = False         # True for Fullscreen, or False for Window.
-ANTS = 10              # Number of Ants to spawn.
+ANTS = 100              # Number of Ants to spawn.
 WIDTH = 1200            # default 1200
 HEIGHT = 800            # default 800
 FPS = 48                # 48-90
@@ -35,7 +35,7 @@ class Ant(pg.sprite.Sprite):
         #self.home = (dS_w/2, dS_h/2)
         self.rect = self.image.get_rect(center=self.nest)
         self.ang = randint(0, 360)
-        self.dzDir = pg.Vector2(cos(radians(self.ang)),sin(radians(self.ang)))
+        self.desireDir = pg.Vector2(cos(radians(self.ang)),sin(radians(self.ang)))
         self.pos = pg.Vector2(self.rect.center)
         self.vel = pg.Vector2(0,0)
         self.last_phero = nest
@@ -43,45 +43,77 @@ class Ant(pg.sprite.Sprite):
     def update(self, dt):  # behavior
         curW, curH = self.drawSurf.get_size()
         accel = pg.Vector2(0,0)
-        maxSpeed = 12
+        maxSpeed = 11  # higher than 11 needs wider edge border
         steerStr = 2
-        wandrStr = 0.16
+        wandrStr = 0.15
+        randAng = randint(0,360)
 
-        if self.pos.distance_to(self.last_phero) > 32:
+        if self.pos.distance_to(self.last_phero) > 24: # 20-25 seems best
             pheromones.add(Trail(self.pos, 1))  # + pg.Vector2(-5, 0).rotate(self.ang) # self.groups()[0]
             self.last_phero = pg.Vector2(self.rect.center)
 
-
-        mid_sensr = vec2round(self.pos + pg.Vector2(16, 0).rotate(self.ang))#.normalize()  # directional vec forward
         #fMid_sensor = (round(fMid_sensor[0]),round(fMid_sensor[1]))
-        left_sensr1 = vec2round(self.pos + pg.Vector2(20, -12).rotate(self.ang))
-        left_sensr2 = vec2round(self.pos + pg.Vector2(20, -18).rotate(self.ang))
+        mid_sensL = vec2round(self.pos + pg.Vector2(20, -3).rotate(self.ang))
+        mid_sensR = vec2round(self.pos + pg.Vector2(20, 3).rotate(self.ang))
+        #mid_sensr = vec2round(self.pos + pg.Vector2(20, 0).rotate(self.ang))#.normalize() # directional vec forward
 
-        right_sensr1 = vec2round(self.pos + pg.Vector2(20, 12).rotate(self.ang))
-        right_sensr2 = vec2round(self.pos + pg.Vector2(20, 18).rotate(self.ang))
+        left_sensr1 = vec2round(self.pos + pg.Vector2(18, -14).rotate(self.ang))
+        left_sensr2 = vec2round(self.pos + pg.Vector2(16, -21).rotate(self.ang))
 
-        #pg.draw.circle(self.drawSurf, (200,0,0), mid_sensr, 1)
+        right_sensr1 = vec2round(self.pos + pg.Vector2(18, 14).rotate(self.ang))
+        right_sensr2 = vec2round(self.pos + pg.Vector2(16, 21).rotate(self.ang))
+
+        #pg.draw.circle(self.drawSurf, (200,0,0), mid_sensL, 1)
+        #pg.draw.circle(self.drawSurf, (200,0,0), mid_sensR, 1)
         #pg.draw.circle(self.drawSurf, (200,0,0), left_sensr1, 1)
-        #pg.draw.circle(self.drawSurf, (200,0,0), right_sensr1, 1)
         #pg.draw.circle(self.drawSurf, (200,0,0), left_sensr2, 1)
+        #pg.draw.circle(self.drawSurf, (200,0,0), right_sensr1, 1)
         #pg.draw.circle(self.drawSurf, (200,0,0), right_sensr2, 1)
 
-        mids_result = self.drawSurf.get_at(mid_sensr)[:3]
-        ls_result1 = self.drawSurf.get_at(left_sensr1)[:3]
-        ls_result2 = self.drawSurf.get_at(left_sensr2)[:3]
-        rs_result1 = self.drawSurf.get_at(right_sensr1)[:3]
-        rs_result2 = self.drawSurf.get_at(right_sensr2)[:3]
-        #if mids_result!= (0,0,0): print(mids_result)
+        ms_rL = self.drawSurf.get_at(mid_sensL)[:3]
+        ms_rR = self.drawSurf.get_at(mid_sensR)[:3]
+        mid_result = (max(ms_rL[0], ms_rR[0]), max(ms_rL[1], ms_rR[1]), max(ms_rL[2], ms_rR[2]))
+        #mid_result = self.drawSurf.get_at(mid_sensr)[:3]
+
+        ls_r1 = self.drawSurf.get_at(left_sensr1)[:3]
+        ls_r2 = self.drawSurf.get_at(left_sensr2)[:3]
+        left_result = (max(ls_r1[0], ls_r2[0]), max(ls_r1[1], ls_r2[1]), max(ls_r1[2], ls_r2[2]))
+
+        rs_r1 = self.drawSurf.get_at(right_sensr1)[:3]
+        rs_r2 = self.drawSurf.get_at(right_sensr2)[:3]
+        right_result = (max(rs_r1[0], rs_r2[0]), max(rs_r1[1], rs_r2[1]), max(rs_r1[2], rs_r2[2]))
+        #if mid_result[2] != 0 and mid_result[:2] == (0,0): print(mid_result)
+
+        if mid_result[2] > max(left_result[2], right_result[2]) and mid_result[:2] == (0,0):
+            self.desireDir = pg.Vector2(1,0).rotate(self.ang).normalize()
+            wandrStr = 0
+        elif left_result[2] > right_result[2] and left_result[:2] == (0,0):
+            self.desireDir = pg.Vector2(0,-1).rotate(self.ang).normalize() #left
+            wandrStr = 0
+        elif right_result[2] > left_result[2] and right_result[:2] == (0,0):
+            self.desireDir = pg.Vector2(0,1).rotate(self.ang).normalize() #right
+            wandrStr = 0
+
+        #self.desireDir = pg.Vector2(self.desireDir + (0,-1)).rotate(self.ang).normalize()
+        #self.desireDir = self.pos + pg.Vector2(20, -18).rotate(self.ang)
 
         #ls_chk1 = self.drawSurf.get_rect().collidepoint(left_sensr1) and self.drawSurf.get_at(left_sensr1) == (0,0,100,255)
         #ls_chk2 = self.drawSurf.get_rect().collidepoint(left_sensr2) and self.drawSurf.get_at(left_sensr2) == (0,0,100,255)
         #if ls_chk1 or ls_chk2 : print("Left")
 
         # if pixel color value [2] > blueThreshold
-        randAng = randint(0,360)
+
+        # Avoid edges
+        margin = 64
+        if min(self.pos.x, self.pos.y, curW - self.pos.x, curH - self.pos.y) < margin:
+            if self.pos.x < margin : self.desireDir = pg.Vector2(self.desireDir + (1,0)).normalize()
+            elif self.pos.x > curW - margin : self.desireDir = pg.Vector2(self.desireDir + (-1,0)).normalize()
+            if self.pos.y < margin : self.desireDir = pg.Vector2(self.desireDir + (0,1)).normalize()
+            elif self.pos.y > curH - margin : self.desireDir = pg.Vector2(self.desireDir + (0,-1)).normalize()
+
         randDir = pg.Vector2(cos(radians(randAng)),sin(radians(randAng)))
-        self.dzDir = pg.Vector2(self.dzDir + randDir * wandrStr).normalize() # this line disable to steer
-        dzVel = self.dzDir * maxSpeed
+        self.desireDir = pg.Vector2(self.desireDir + randDir * wandrStr).normalize()
+        dzVel = self.desireDir * maxSpeed
         dzStrFrc = (dzVel - self.vel) * steerStr
         accel = dzStrFrc if pg.Vector2(dzStrFrc).magnitude() <= steerStr else pg.Vector2(dzStrFrc.normalize() * steerStr)
         velo = self.vel + accel * dt
@@ -89,13 +121,6 @@ class Ant(pg.sprite.Sprite):
 
         self.pos += self.vel * dt
         self.ang = degrees(atan2(self.vel[1],self.vel[0]))
-
-        margin = 64
-        if min(self.pos.x, self.pos.y, curW - self.pos.x, curH - self.pos.y) < margin:
-            if self.pos.x < margin : self.dzDir = pg.Vector2(self.dzDir + (1,0)).normalize()
-            elif self.pos.x > curW - margin : self.dzDir = pg.Vector2(self.dzDir + (-1,0)).normalize()
-            if self.pos.y < margin : self.dzDir = pg.Vector2(self.dzDir + (0,1)).normalize()
-            elif self.pos.y > curH - margin : self.dzDir = pg.Vector2(self.dzDir + (0,-1)).normalize()
 
         # adjusts angle of img to match heading
         self.image = pg.transform.rotate(self.orig_img, -self.ang)
@@ -106,23 +131,23 @@ class Ant(pg.sprite.Sprite):
 class Trail(pg.sprite.Sprite):
     def __init__(self, pos, phero_type):
         super().__init__()
-        self.image = pg.Surface((16, 16))#, pg.SRCALPHA)
+        self.image = pg.Surface((16, 16)) #, pg.SRCALPHA) # alphatooslow
         self.image.fill(0)
         self.image.set_colorkey(0)
         #if phero_type = 1
-        pg.draw.circle(self.image, [0,0,100], [8, 8], 5)
+        pg.draw.circle(self.image, [0,0,100], [8, 8], 4)
         self.img_copy = self.image.copy()
         self.rect = self.image.get_rect(center=pos)
         self.pos = pg.Vector2(self.rect.center)
-        self.str = 800
+        self.str = 500
 
     def update(self, dt):
-        self.str -= 1
-        evap = self.str/800
-        self.image.fill(0)
-        pg.draw.circle(self.image, [0,0,80*evap+20], [8, 8], 2*evap+3)
-        if self.str == 0:
+        self.str -= (dt/10)*FPS
+        if self.str < 0:
             return self.kill()
+        evap = self.str/500
+        self.image.fill(0)
+        pg.draw.circle(self.image, [0,0,90*evap+10], [8, 8], 4) # ,155*evap+100
 
 def vec2round(vec2):
     return (round(vec2[0]),round(vec2[1]))
@@ -179,6 +204,7 @@ def main():
         fpsChecker+=1  #fpsChecker = 0  # must go before main loop
         if fpsChecker>=FPS:  # quick debug to see fps in terminal
             print(round(clock.get_fps(),2))
+            print((dt/10)*FPS)
             fpsChecker=0
 
 if __name__ == '__main__':
