@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-from math import sin, cos, atan2, radians, degrees
+from math import pi, sin, cos, atan2, radians, degrees
 from random import randint
 import pygame as pg
 '''
 NAnts
 Copyright (c) 2021  Nikolaus Stromberg  nikorasu85@gmail.com
 '''
-FLLSCRN = False         # True for Fullscreen, or False for Window.
+FLLSCRN = True         # True for Fullscreen, or False for Window.
 ANTS = 100              # Number of Ants to spawn.
 WIDTH = 1200            # default 1200
 HEIGHT = 800            # default 800
@@ -48,7 +48,7 @@ class Ant(pg.sprite.Sprite):
         steerStr = 3  # 2-4
         margin = 42
 
-        if self.pos.distance_to(self.last_phero) > 24: # 20-25 seems best
+        if self.pos.distance_to(self.last_phero) > 24: # 20-25 seems best, too high they get distracted
             pheromones.add(Trail(self.pos, 1))  # + pg.Vector2(-5, 0).rotate(self.ang) # self.groups()[0]
             self.last_phero = pg.Vector2(self.rect.center)
 
@@ -124,24 +124,32 @@ class Trail(pg.sprite.Sprite):
     def __init__(self, pos, phero_type):
         super().__init__()
         self.type = phero_type
-        self.image = pg.Surface((16, 16))
+        self.image = pg.Surface((8, 8))
         self.image.fill(0)
         self.image.set_colorkey(0)
-        #pg.draw.circle(self.image, self.color, [8, 8], 4)
-        self.img_copy = self.image.copy()
+        #self.img_copy = self.image.copy()
         self.rect = self.image.get_rect(center=pos)
-        self.pos = pg.Vector2(self.rect.center)
+        #self.pos = pg.Vector2(self.rect.center)
         self.str = 500
         # maybe if ontop of same color, add color to self, using surface.get_at()
-
     def update(self, dt):
         self.str -= (dt/10)*FPS
         if self.str < 0:
             return self.kill()
         evap = self.str/500
         self.image.fill(0)
-        if self.type == 1 : pg.draw.circle(self.image, [0,0,90*evap+10], [8, 8], 4)
-        if self.type == 2 : pg.draw.circle(self.image, [0,90*evap+10,0], [8, 8], 4)
+        if self.type == 1 : pg.draw.circle(self.image, [0, 0, 90*evap+10], [4, 4], 4)
+        if self.type == 2 : pg.draw.circle(self.image, [0, 90*evap+10, 0], [4, 4], 4)
+
+class Food(pg.sprite.Sprite):
+    def __init__(self, pos):
+        super().__init__()
+        self.pos = pos
+        self.image = pg.Surface((16, 16))
+        self.image.fill(0)
+        self.image.set_colorkey(0)
+        pg.draw.circle(self.image, [0,200,0], [8, 8], 4)
+        self.rect = self.image.get_rect(center=pos)
 
 def vec2round(vec2):
     return (round(vec2[0]),round(vec2[1]))
@@ -157,17 +165,21 @@ def main():
     if FLLSCRN:  #screen = pg.display.set_mode((0,0), pg.FULLSCREEN)
         currentRez = (pg.display.Info().current_w, pg.display.Info().current_h)
         screen = pg.display.set_mode(currentRez, pg.SCALED) # pg.FULLSCREEN | #pg.display.toggle_fullscreen()
-        pg.mouse.set_visible(False)
+        #pg.mouse.set_visible(False)
     else: screen = pg.display.set_mode((WIDTH, HEIGHT), pg.RESIZABLE)# | pg.DOUBLEBUF)
 
     cur_w, cur_h = screen.get_size()
     nest = (cur_w/3, cur_h/2)
+
+    #background = pg.img.load("background.png").convert_alpha()
 
     workers = pg.sprite.Group()
 
     for n in range(ANTS):
         workers.add(Ant(screen, nest))
 
+    foodList = []
+    foods = pg.sprite.Group()
     clock = pg.time.Clock()
     fpsChecker = 0
     # main loop
@@ -175,6 +187,22 @@ def main():
         for e in pg.event.get():
             if e.type == pg.QUIT or e.type == pg.KEYDOWN and e.key == pg.K_ESCAPE:
                 return
+
+            elif e.type == pg.MOUSEBUTTONDOWN:
+                if e.button == 1:
+                    foodBits = 100
+                    fRadius = 32
+                    foods = pg.sprite.Group()
+                    mousepos = pg.mouse.get_pos()
+                    for i in range(0, foodBits):
+                        dist = pow(i / (foodBits - 1.0), 0.5) * fRadius # (i / (foodBits - 1.0)**.5 #sqrt(i / (foodBits - 1.0))
+                        angle = 2 * pi * 0.618033 * i
+                        #angle = 3 * 2 * pi * (i / foodBits) ** 0.5
+                        #dist = 100 * (i / foodBits) ** 0.5
+                        fx = mousepos[0] + dist * cos(angle)
+                        fy = mousepos[1] + dist * sin(angle)
+                        foods.add(Food((fx,fy)))
+                    foodList = foods.sprites()
 
         dt = clock.tick(FPS) / 100
         #screen.fill(0) # enable this to show sensor debug spots
@@ -185,6 +213,7 @@ def main():
         screen.fill(0) # fill MUST be after sensors update, so previous draw is visible to them
 
         pheromones.draw(screen)
+        foods.draw(screen)
 
         pg.draw.circle(screen, [30,10,10], (nest[0],nest[1]+6), 6, 3)
         pg.draw.circle(screen, [40,20,20], (nest[0],nest[1]+4), 9, 4)
