@@ -37,25 +37,24 @@ class Ant(pg.sprite.Sprite):
         self.pos = pg.Vector2(self.rect.center)
         self.vel = pg.Vector2(0,0)
         self.last_phero = nest
+        self.mode = 0
 
     def update(self, dt):  # behavior
         curW, curH = self.drawSurf.get_size()
-        mid_result = left_result = right_result = (0,0,0)
+        mid_result = left_result = right_result = [0,0,0]
         randAng = randint(0,360)
         accel = pg.Vector2(0,0)
         wandrStr = .14
         maxSpeed = 11  # more than 11 may stretch pheros too much
         steerStr = 3  # 2-4
-        margin = 42
 
-        if self.pos.distance_to(self.last_phero) > 24: # 20-25 seems best, too high they get distracted
-            pheromones.add(Trail(self.pos, 1))  # + pg.Vector2(-5, 0).rotate(self.ang) # self.groups()[0]
-            self.last_phero = pg.Vector2(self.rect.center)
+        if self.mode == 0 and self.pos.distance_to(self.nest) > 42:
+            self.mode = 1
 
         #mid_sensr = vec2round(self.pos + pg.Vector2(20, 0).rotate(self.ang))#.normalize() # directional vec forward
-        mid_sensL = vec2round(self.pos + pg.Vector2(20, -3).rotate(self.ang))
-        mid_sensR = vec2round(self.pos + pg.Vector2(20, 3).rotate(self.ang))
-
+        mid_sensL = vec2round(self.pos + pg.Vector2(21, -3).rotate(self.ang))
+        mid_sensR = vec2round(self.pos + pg.Vector2(21, 3).rotate(self.ang))
+        # either mid sensor needs to be a bit in front, or side sensors need to be more back..
         left_sensr1 = vec2round(self.pos + pg.Vector2(18, -14).rotate(self.ang))
         left_sensr2 = vec2round(self.pos + pg.Vector2(16, -21).rotate(self.ang))
 
@@ -86,22 +85,84 @@ class Ant(pg.sprite.Sprite):
 
         #if mid_result[2] != 0 and mid_result[:2] == (0,0): print(mid_result)
 
-        if mid_result[2] > max(left_result[2], right_result[2]) and mid_result[:2] == (0,0):
-            self.desireDir = pg.Vector2(1,0).rotate(self.ang).normalize()
+        if self.pos.distance_to(self.last_phero) > 22 and self.mode != 3: # 20-25 seems best, too high they get distracted
+            pheromones.add(Trail(self.pos, self.mode))  # + pg.Vector2(-5, 0).rotate(self.ang) # self.groups()[0]
+            self.last_phero = pg.Vector2(self.rect.center)
+
+        if self.mode == 1:
+            if mid_result == (2,150,2): # if food
+                self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize()
+                self.mode = 2
+            elif mid_result[1] > max(left_result[1], right_result[1]) and (mid_result[0],mid_result[2]) == (0,0):
+                self.desireDir = pg.Vector2(1,0).rotate(self.ang).normalize()
+                wandrStr = 0
+            elif left_result[1] > right_result[1] and (left_result[0],left_result[2]) == (0,0):
+                self.desireDir = pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
+                wandrStr = 0
+            elif right_result[1] > left_result[1] and (right_result[0],right_result[2]) == (0,0):
+                self.desireDir = pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
+                wandrStr = 0
+
+        elif self.mode == 2:
+            if self.pos.distance_to(self.nest) < 32:
+                self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize()
+                self.mode = 1
+            elif mid_result[2] > max(left_result[2], right_result[2]) and mid_result[:2] == (0,0):
+                self.desireDir = pg.Vector2(1,0).rotate(self.ang).normalize()
+                wandrStr = 0
+            elif left_result[2] > right_result[2] and left_result[:2] == (0,0):
+                self.desireDir = pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
+                wandrStr = 0
+            elif right_result[2] > left_result[2] and right_result[:2] == (0,0):
+                self.desireDir = pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
+                wandrStr = 0
+            else: # needs work, can't avoid walls.. maybe needs more wandrStr
+                self.desireDir = pg.Vector2(self.nest - self.pos).normalize()
+                wandrStr = .1   #pg.Vector2(self.desireDir + (1,0)).rotate(pg.math.Vector2.as_polar(self.nest - self.pos)[1])
+        elif self.mode == 3:
+            if mid_result == (2,150,2): # if food
+                self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize()
+                self.mode = 2
+            elif mid_result[1] > max(left_result[1], right_result[1]) and (mid_result[0],mid_result[2]) == (0,0):
+                self.desireDir = pg.Vector2(1,0).rotate(self.ang).normalize()
+                wandrStr = 0
+            elif left_result[1] > right_result[1] and (left_result[0],left_result[2]) == (0,0):
+                self.desireDir = pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
+                wandrStr = 0
+            elif right_result[1] > left_result[1] and (right_result[0],right_result[2]) == (0,0):
+                self.desireDir = pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
+                wandrStr = 0
+            if self.pos.distance_to(self.nest) < 32:
+                self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize()
+                self.mode = 1
+
+
+        wallColor = (50,50,50)  # avoid walls of this color
+        if mid_result == wallColor:
+            self.desireDir = pg.Vector2(self.desireDir + (-1,0)).rotate(self.ang).normalize()
             wandrStr = 0
-        elif left_result[2] > right_result[2] and left_result[:2] == (0,0):
-            self.desireDir = pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
+            steerStr = 5
+            if self.mode == 1 : self.mode = 3
+        elif left_result == wallColor:
+            self.desireDir = pg.Vector2(self.desireDir + (0,1)).rotate(self.ang).normalize()
             wandrStr = 0
-        elif right_result[2] > left_result[2] and right_result[:2] == (0,0):
-            self.desireDir = pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
+            steerStr = 4
+            if self.mode == 1 : self.mode = 3
+        elif right_result == wallColor:
+            self.desireDir = pg.Vector2(self.desireDir + (0,-1)).rotate(self.ang).normalize()
             wandrStr = 0
+            steerStr = 4
+            if self.mode == 1 : self.mode = 3
 
         # Avoid edges
+        margin = 42
         if min(self.pos.x, self.pos.y, curW - self.pos.x, curH - self.pos.y) < margin:
             if self.pos.x < margin : self.desireDir = pg.Vector2(self.desireDir + (1,0)).normalize()
             elif self.pos.x > curW - margin : self.desireDir = pg.Vector2(self.desireDir + (-1,0)).normalize()
             if self.pos.y < margin : self.desireDir = pg.Vector2(self.desireDir + (0,1)).normalize()
             elif self.pos.y > curH - margin : self.desireDir = pg.Vector2(self.desireDir + (0,-1)).normalize()
+            if self.mode == 1 : self.mode = 3
+
 
         randDir = pg.Vector2(cos(radians(randAng)),sin(radians(randAng)))
         self.desireDir = pg.Vector2(self.desireDir + randDir * wandrStr).normalize()
@@ -127,9 +188,7 @@ class Trail(pg.sprite.Sprite):
         self.image = pg.Surface((8, 8))
         self.image.fill(0)
         self.image.set_colorkey(0)
-        #self.img_copy = self.image.copy()
         self.rect = self.image.get_rect(center=pos)
-        #self.pos = pg.Vector2(self.rect.center)
         self.str = 500
         # maybe if ontop of same color, add color to self, using surface.get_at()
     def update(self, dt):
@@ -148,8 +207,10 @@ class Food(pg.sprite.Sprite):
         self.image = pg.Surface((16, 16))
         self.image.fill(0)
         self.image.set_colorkey(0)
-        pg.draw.circle(self.image, [0,200,0], [8, 8], 4)
+        pg.draw.circle(self.image, [2,150,2], [8, 8], 4)
         self.rect = self.image.get_rect(center=pos)
+    def pickup(self):
+        self.kill()
 
 def vec2round(vec2):
     return (round(vec2[0]),round(vec2[1]))
@@ -192,7 +253,6 @@ def main():
                 if e.button == 1:
                     foodBits = 100
                     fRadius = 32
-                    foods = pg.sprite.Group()
                     mousepos = pg.mouse.get_pos()
                     for i in range(0, foodBits):
                         dist = pow(i / (foodBits - 1.0), 0.5) * fRadius # (i / (foodBits - 1.0)**.5 #sqrt(i / (foodBits - 1.0))
@@ -202,6 +262,12 @@ def main():
                         fx = mousepos[0] + dist * cos(angle)
                         fy = mousepos[1] + dist * sin(angle)
                         foods.add(Food((fx,fy)))
+                    foodList.extend(foods.sprites())
+                if e.button == 3:
+                    mousepos = pg.mouse.get_pos()
+                    for fbit in foodList:
+                        if pg.Vector2(fbit.rect.center).distance_to(mousepos) < 32:
+                            fbit.pickup()
                     foodList = foods.sprites()
 
         dt = clock.tick(FPS) / 100
@@ -219,6 +285,8 @@ def main():
         pg.draw.circle(screen, [40,20,20], (nest[0],nest[1]+4), 9, 4)
         pg.draw.circle(screen, [50,30,30], (nest[0],nest[1]+2), 12, 4)
         pg.draw.circle(screen, [60,40,40], nest, 16, 5)
+
+        #pg.draw.rect(screen, (50,50,50), [600, 200, 25, 400])
 
         workers.draw(screen)
 
