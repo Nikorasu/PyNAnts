@@ -52,14 +52,13 @@ class Ant(pg.sprite.Sprite):
             self.mode = 1
 
         #mid_sensr = vec2round(self.pos + pg.Vector2(20, 0).rotate(self.ang))#.normalize() # directional vec forward
-        mid_sensL = vec2round(self.pos + pg.Vector2(21, -3).rotate(self.ang))
-        mid_sensR = vec2round(self.pos + pg.Vector2(21, 3).rotate(self.ang))
+        mid_sensL = self.vec2round(self.pos + pg.Vector2(21, -3).rotate(self.ang))
+        mid_sensR = self.vec2round(self.pos + pg.Vector2(21, 3).rotate(self.ang))
+        left_sensr1 = self.vec2round(self.pos + pg.Vector2(18, -14).rotate(self.ang))
+        left_sensr2 = self.vec2round(self.pos + pg.Vector2(16, -21).rotate(self.ang))
+        right_sensr1 = self.vec2round(self.pos + pg.Vector2(18, 14).rotate(self.ang))
+        right_sensr2 = self.vec2round(self.pos + pg.Vector2(16, 21).rotate(self.ang))
         # either mid sensor needs to be a bit in front, or side sensors need to be more back..
-        left_sensr1 = vec2round(self.pos + pg.Vector2(18, -14).rotate(self.ang))
-        left_sensr2 = vec2round(self.pos + pg.Vector2(16, -21).rotate(self.ang))
-
-        right_sensr1 = vec2round(self.pos + pg.Vector2(18, 14).rotate(self.ang))
-        right_sensr2 = vec2round(self.pos + pg.Vector2(16, 21).rotate(self.ang))
 
         #pg.draw.circle(self.drawSurf, (200,0,200), mid_sensL, 1)
         #pg.draw.circle(self.drawSurf, (200,0,200), mid_sensR, 1)
@@ -72,18 +71,14 @@ class Ant(pg.sprite.Sprite):
             ms_rL = self.drawSurf.get_at(mid_sensL)[:3]
             ms_rR = self.drawSurf.get_at(mid_sensR)[:3]
             mid_result = (max(ms_rL[0], ms_rR[0]), max(ms_rL[1], ms_rR[1]), max(ms_rL[2], ms_rR[2]))
-
         if self.drawSurf.get_rect().collidepoint(left_sensr1) and self.drawSurf.get_rect().collidepoint(left_sensr2):
             ls_r1 = self.drawSurf.get_at(left_sensr1)[:3]
             ls_r2 = self.drawSurf.get_at(left_sensr2)[:3]
             left_result = (max(ls_r1[0], ls_r2[0]), max(ls_r1[1], ls_r2[1]), max(ls_r1[2], ls_r2[2]))
-
         if self.drawSurf.get_rect().collidepoint(right_sensr1) and self.drawSurf.get_rect().collidepoint(right_sensr2):
             rs_r1 = self.drawSurf.get_at(right_sensr1)[:3]
             rs_r2 = self.drawSurf.get_at(right_sensr2)[:3]
             right_result = (max(rs_r1[0], rs_r2[0]), max(rs_r1[1], rs_r2[1]), max(rs_r1[2], rs_r2[2]))
-
-        #if mid_result[2] != 0 and mid_result[:2] == (0,0): print(mid_result)
 
         if self.pos.distance_to(self.last_phero) > 22 and self.mode != 3: # 20-25 seems best, too high they get distracted
             pheromones.add(Trail(self.pos, self.mode))  # + pg.Vector2(-5, 0).rotate(self.ang) # self.groups()[0]
@@ -136,7 +131,6 @@ class Ant(pg.sprite.Sprite):
                 self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize()
                 self.mode = 1
 
-
         wallColor = (50,50,50)  # avoid walls of this color
         if mid_result == wallColor:
             self.desireDir = pg.Vector2(self.desireDir + (-1,0)).rotate(self.ang).normalize()
@@ -163,7 +157,6 @@ class Ant(pg.sprite.Sprite):
             elif self.pos.y > curH - margin : self.desireDir = pg.Vector2(self.desireDir + (0,-1)).normalize()
             if self.mode == 1 : self.mode = 3
 
-
         randDir = pg.Vector2(cos(radians(randAng)),sin(radians(randAng)))
         self.desireDir = pg.Vector2(self.desireDir + randDir * wandrStr).normalize()
         dzVel = self.desireDir * maxSpeed
@@ -180,6 +173,9 @@ class Ant(pg.sprite.Sprite):
         self.rect = self.image.get_rect(center=self.rect.center)  # recentering fix
         # actually update position
         self.rect.center = self.pos
+
+    def vec2round(self, vec2):
+        return (round(vec2[0]),round(vec2[1]))
 
 class Trail(pg.sprite.Sprite):
     def __init__(self, pos, phero_type):
@@ -211,9 +207,6 @@ class Food(pg.sprite.Sprite):
         self.rect = self.image.get_rect(center=pos)
     def pickup(self):
         self.kill()
-
-def vec2round(vec2):
-    return (round(vec2[0]),round(vec2[1]))
 
 pheromones = pg.sprite.Group()
 
@@ -289,7 +282,6 @@ def main():
         #pg.draw.rect(screen, (50,50,50), [600, 200, 25, 400])
 
         workers.draw(screen)
-
         pg.display.update()
 
         fpsChecker+=1  #fpsChecker = 0  # must go before main loop
