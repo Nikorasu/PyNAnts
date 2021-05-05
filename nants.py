@@ -52,12 +52,12 @@ class Ant(pg.sprite.Sprite):
             self.mode = 1
 
         #mid_sensr = vec2round(self.pos + pg.Vector2(20, 0).rotate(self.ang))#.normalize() # directional vec forward
-        mid_sensL = self.vec2round(self.pos + pg.Vector2(21, -3).rotate(self.ang))
-        mid_sensR = self.vec2round(self.pos + pg.Vector2(21, 3).rotate(self.ang))
-        left_sensr1 = self.vec2round(self.pos + pg.Vector2(18, -14).rotate(self.ang))
-        left_sensr2 = self.vec2round(self.pos + pg.Vector2(16, -21).rotate(self.ang))
-        right_sensr1 = self.vec2round(self.pos + pg.Vector2(18, 14).rotate(self.ang))
-        right_sensr2 = self.vec2round(self.pos + pg.Vector2(16, 21).rotate(self.ang))
+        mid_sensL = Vec2.vint(self.pos + pg.Vector2(21, -3).rotate(self.ang))
+        mid_sensR = Vec2.vint(self.pos + pg.Vector2(21, 3).rotate(self.ang))
+        left_sensr1 = Vec2.vint(self.pos + pg.Vector2(18, -14).rotate(self.ang))
+        left_sensr2 = Vec2.vint(self.pos + pg.Vector2(16, -21).rotate(self.ang))
+        right_sensr1 = Vec2.vint(self.pos + pg.Vector2(18, 14).rotate(self.ang))
+        right_sensr2 = Vec2.vint(self.pos + pg.Vector2(16, 21).rotate(self.ang))
         # either mid sensor needs to be a bit in front, or side sensors need to be more back..
 
         #pg.draw.circle(self.drawSurf, (200,0,200), mid_sensL, 1)
@@ -174,8 +174,12 @@ class Ant(pg.sprite.Sprite):
         # actually update position
         self.rect.center = self.pos
 
-    def vec2round(self, vec2):
-        return (round(vec2[0]),round(vec2[1]))
+class Vec2():
+	def __init__(self, x=0, y=0):
+		self.x = x
+		self.y = y
+	def vint(self):
+		return (int(self.x), int(self.y))
 
 class Trail(pg.sprite.Sprite):
     def __init__(self, pos, phero_type):
@@ -188,7 +192,7 @@ class Trail(pg.sprite.Sprite):
         self.str = 500
         # maybe if ontop of same color, add color to self, using surface.get_at()
     def update(self, dt):
-        self.str -= (dt/10)*FPS
+        self.str -= ((dt/10)*FPS) * (60/FPS)
         if self.str < 0:
             return self.kill()
         evap = self.str/500
@@ -259,7 +263,7 @@ def main():
                 if e.button == 3:
                     mousepos = pg.mouse.get_pos()
                     for fbit in foodList:
-                        if pg.Vector2(fbit.rect.center).distance_to(mousepos) < 32:
+                        if pg.Vector2(fbit.rect.center).distance_to(mousepos) < fRadius:
                             fbit.pickup()
                     foodList = foods.sprites()
 
