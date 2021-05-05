@@ -86,65 +86,65 @@ class Ant(pg.sprite.Sprite):
 
         if self.mode == 1:
             if mid_result == (2,150,2): # if food
-                self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize()
+                self.desireDir += pg.Vector2(-1,0).rotate(self.ang).normalize()
                 self.mode = 2
             elif mid_result[1] > max(left_result[1], right_result[1]) and (mid_result[0],mid_result[2]) == (0,0):
-                self.desireDir = pg.Vector2(1,0).rotate(self.ang).normalize()
+                self.desireDir += pg.Vector2(1,0).rotate(self.ang).normalize()
                 wandrStr = 0
             elif left_result[1] > right_result[1] and (left_result[0],left_result[2]) == (0,0):
-                self.desireDir = pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
+                self.desireDir += pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
                 wandrStr = 0
             elif right_result[1] > left_result[1] and (right_result[0],right_result[2]) == (0,0):
-                self.desireDir = pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
+                self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = 0
 
         elif self.mode == 2:
             if self.pos.distance_to(self.nest) < 32:
-                self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize()
+                self.desireDir += pg.Vector2(-1,0).rotate(self.ang).normalize()
                 self.mode = 1
             elif mid_result[2] > max(left_result[2], right_result[2]) and mid_result[:2] == (0,0):
-                self.desireDir = pg.Vector2(1,0).rotate(self.ang).normalize()
+                self.desireDir += pg.Vector2(1,0).rotate(self.ang).normalize()
                 wandrStr = 0
             elif left_result[2] > right_result[2] and left_result[:2] == (0,0):
-                self.desireDir = pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
+                self.desireDir += pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
                 wandrStr = 0
             elif right_result[2] > left_result[2] and right_result[:2] == (0,0):
-                self.desireDir = pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
+                self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = 0
             else: # needs work, can't avoid walls.. maybe needs more wandrStr
-                self.desireDir = pg.Vector2(self.nest - self.pos).normalize()
+                self.desireDir += pg.Vector2(self.nest - self.pos).normalize() * .1
                 wandrStr = .1   #pg.Vector2(self.desireDir + (1,0)).rotate(pg.math.Vector2.as_polar(self.nest - self.pos)[1])
         elif self.mode == 3:
             if mid_result == (2,150,2): # if food
-                self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize()
+                self.desireDir += pg.Vector2(-1,0).rotate(self.ang).normalize()
                 self.mode = 2
             elif mid_result[1] > max(left_result[1], right_result[1]) and (mid_result[0],mid_result[2]) == (0,0):
-                self.desireDir = pg.Vector2(1,0).rotate(self.ang).normalize()
+                self.desireDir += pg.Vector2(1,0).rotate(self.ang).normalize()
                 wandrStr = 0
             elif left_result[1] > right_result[1] and (left_result[0],left_result[2]) == (0,0):
-                self.desireDir = pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
+                self.desireDir += pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
                 wandrStr = 0
             elif right_result[1] > left_result[1] and (right_result[0],right_result[2]) == (0,0):
-                self.desireDir = pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
+                self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = 0
             if self.pos.distance_to(self.nest) < 32:
-                self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize()
+                self.desireDir += pg.Vector2(-1,0).rotate(self.ang).normalize()
                 self.mode = 1
 
         wallColor = (50,50,50)  # avoid walls of this color
-        if mid_result == wallColor:
-            self.desireDir = pg.Vector2(self.desireDir + (-1,0)).rotate(self.ang).normalize()
-            wandrStr = 0
-            steerStr = 5
-            if self.mode == 1 : self.mode = 3
-        elif left_result == wallColor:
-            self.desireDir = pg.Vector2(self.desireDir + (0,1)).rotate(self.ang).normalize()
-            wandrStr = 0
+        if left_result == wallColor:
+            self.desireDir += pg.Vector2(0,1).rotate(self.ang).normalize()
+            wandrStr = .1
             steerStr = 4
             if self.mode == 1 : self.mode = 3
         elif right_result == wallColor:
-            self.desireDir = pg.Vector2(self.desireDir + (0,-1)).rotate(self.ang).normalize()
-            wandrStr = 0
+            self.desireDir += pg.Vector2(0,-1).rotate(self.ang).normalize()
+            wandrStr = .1
+            steerStr = 4
+            if self.mode == 1 : self.mode = 3
+        elif mid_result == wallColor:
+            self.desireDir += pg.Vector2(-1,0).rotate(self.ang).normalize()
+            wandrStr = .1
             steerStr = 4
             if self.mode == 1 : self.mode = 3
 
@@ -283,7 +283,7 @@ def main():
         pg.draw.circle(screen, [50,30,30], (nest[0],nest[1]+2), 12, 4)
         pg.draw.circle(screen, [60,40,40], nest, 16, 5)
 
-        #pg.draw.rect(screen, (50,50,50), [600, 200, 25, 400])
+        pg.draw.rect(screen, (50,50,50), [1000, 300, 42, 400])
 
         workers.draw(screen)
         pg.display.update()
