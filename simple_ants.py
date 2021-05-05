@@ -10,14 +10,14 @@ FLLSCRN = True         # True for Fullscreen, or False for Window.
 ANTS = 100              # Number of Ants to spawn.
 WIDTH = 1200            # default 1200
 HEIGHT = 800            # default 800
-FPS = 48                # 48-90
+FPS = 60                # 48-90
 
 class Ant(pg.sprite.Sprite):
     def __init__(self, drawSurf, nest):
         super().__init__()
         self.drawSurf = drawSurf
         self.nest = nest
-        self.image = pg.Surface((12, 21))#, pg.HWSURFACE)
+        self.image = pg.Surface((12, 21)).convert()#, pg.HWSURFACE)
         self.image.set_colorkey(0)
         cBrown = (80,42,42)
         # Draw Ant
@@ -43,8 +43,8 @@ class Ant(pg.sprite.Sprite):
         mid_result = left_result = right_result = (0,0,0)
         randAng = randint(0,360)
         accel = pg.Vector2(0,0)
-        wandrStr = .14
-        maxSpeed = 11  # more than 11 may stretch pheros too much
+        wandrStr = .15
+        maxSpeed = 12  # more than 11 may stretch pheros too much
         steerStr = 3  # 2-4
 
         if self.pos.distance_to(self.last_phero) > 24: # 20-25 seems best, too high they get distracted
@@ -52,14 +52,14 @@ class Ant(pg.sprite.Sprite):
             self.last_phero = pg.Vector2(self.rect.center)
 
         #mid_sensr = vec2round(self.pos + pg.Vector2(20, 0).rotate(self.ang))#.normalize() # directional vec forward
-        mid_sensL = self.vec2round(self.pos + pg.Vector2(21, -3).rotate(self.ang))
-        mid_sensR = self.vec2round(self.pos + pg.Vector2(21, 3).rotate(self.ang))
+        mid_sensL = self.vint(self.pos + pg.Vector2(21, -3).rotate(self.ang))
+        mid_sensR = self.vint(self.pos + pg.Vector2(21, 3).rotate(self.ang))
         # either mid sensor needs to be a bit in front, or side sensors need to be more back..
-        left_sensr1 = self.vec2round(self.pos + pg.Vector2(18, -14).rotate(self.ang))
-        left_sensr2 = self.vec2round(self.pos + pg.Vector2(16, -21).rotate(self.ang))
+        left_sensr1 = self.vint(self.pos + pg.Vector2(18, -14).rotate(self.ang))
+        left_sensr2 = self.vint(self.pos + pg.Vector2(16, -21).rotate(self.ang))
 
-        right_sensr1 = self.vec2round(self.pos + pg.Vector2(18, 14).rotate(self.ang))
-        right_sensr2 = self.vec2round(self.pos + pg.Vector2(16, 21).rotate(self.ang))
+        right_sensr1 = self.vint(self.pos + pg.Vector2(18, 14).rotate(self.ang))
+        right_sensr2 = self.vint(self.pos + pg.Vector2(16, 21).rotate(self.ang))
 
         #pg.draw.circle(self.drawSurf, (200,0,200), mid_sensL, 1)
         #pg.draw.circle(self.drawSurf, (200,0,200), mid_sensR, 1)
@@ -118,8 +118,7 @@ class Ant(pg.sprite.Sprite):
         # actually update position
         self.rect.center = self.pos
 
-    def vec2round(self, vec2):
-        return (round(vec2[0]),round(vec2[1]))
+    def vint(self, vec2) : return (int(vec2[0]), int(vec2[1]))
 
 class Trail(pg.sprite.Sprite):
     def __init__(self, pos, phero_type):
@@ -132,7 +131,7 @@ class Trail(pg.sprite.Sprite):
         self.str = 500
 
     def update(self, dt):
-        self.str -= (dt/10)*FPS
+        self.str -= ((dt/10)*FPS) * (60/FPS)
         if self.str < 0:
             return self.kill()
         evap = self.str/500
@@ -151,11 +150,11 @@ def main():
     if FLLSCRN:  #screen = pg.display.set_mode((0,0), pg.FULLSCREEN)
         currentRez = (pg.display.Info().current_w, pg.display.Info().current_h)
         screen = pg.display.set_mode(currentRez, pg.SCALED) # pg.FULLSCREEN | #pg.display.toggle_fullscreen()
-        #pg.mouse.set_visible(False)
+        pg.mouse.set_visible(False)
     else: screen = pg.display.set_mode((WIDTH, HEIGHT), pg.RESIZABLE)# | pg.DOUBLEBUF)
 
     cur_w, cur_h = screen.get_size()
-    nest = (cur_w/3, cur_h/2)
+    nest = (cur_w/2, cur_h/2) #w/3
 
     #background = pg.img.load("background.png").convert_alpha()
 
@@ -181,10 +180,10 @@ def main():
         screen.fill(0) # fill MUST be after sensors update, so previous draw is visible to them
 
         pheromones.draw(screen)
-        pg.draw.circle(screen, [30,10,10], (nest[0],nest[1]+6), 6, 3)
-        pg.draw.circle(screen, [40,20,20], (nest[0],nest[1]+4), 9, 4)
-        pg.draw.circle(screen, [50,30,30], (nest[0],nest[1]+2), 12, 4)
-        pg.draw.circle(screen, [60,40,40], nest, 16, 5)
+        #pg.draw.circle(screen, [30,10,10], (nest[0],nest[1]+6), 6, 3)
+        #pg.draw.circle(screen, [40,20,20], (nest[0],nest[1]+4), 9, 4)
+        #pg.draw.circle(screen, [50,30,30], (nest[0],nest[1]+2), 12, 4)
+        #pg.draw.circle(screen, [60,40,40], nest, 16, 5)
         workers.draw(screen)
 
         pg.display.update()
@@ -193,6 +192,7 @@ def main():
         if fpsChecker>=FPS:  # quick debug to see fps in terminal
             print(round(clock.get_fps(),2))
             #print((dt/10)*FPS)
+            print(dt)
             fpsChecker=0
 
 if __name__ == '__main__':
