@@ -12,13 +12,13 @@ ANTS = 100              # Number of Ants to spawn.
 WIDTH = 1200            # default 1200
 HEIGHT = 800            # default 800
 FPS = 60                # 48-90
-PRATIO = 6              # Pixel Size for Pheromone grid
+PRATIO = 5              # Pixel Size for Pheromone grid
 
 class Ant(pg.sprite.Sprite):
     def __init__(self, drawSurf, nest, pheroLayer):
         super().__init__()
         self.drawSurf = drawSurf
-        self.pheromones = pheroLayer
+        self.phero = pheroLayer
         self.nest = nest
         self.image = pg.Surface((12, 21)).convert()#, pg.HWSURFACE)
         self.image.set_colorkey(0)
@@ -39,7 +39,6 @@ class Ant(pg.sprite.Sprite):
         self.desireDir = pg.Vector2(cos(radians(self.ang)),sin(radians(self.ang)))
         self.pos = pg.Vector2(self.rect.center)
         self.vel = pg.Vector2(0,0)
-        self.last_phero = self.nest
         self.last_sdp = (nest[0]/10/2,nest[1]/10/2)
         self.mode = 0
 
@@ -48,8 +47,8 @@ class Ant(pg.sprite.Sprite):
         mid_result = left_result = right_result = [0,0,0]
         randAng = randint(0,360)
         accel = pg.Vector2(0,0)
-        wandrStr = .14
-        maxSpeed = 12  # more than 11 may stretch pheros too much
+        wandrStr = .12
+        maxSpeed = 12
         steerStr = 3  # 2-4
 
         if self.mode == 0 and self.pos.distance_to(self.nest) > 42:
@@ -64,13 +63,6 @@ class Ant(pg.sprite.Sprite):
         right_sensr2 = Vec2.vint(self.pos + pg.Vector2(16, 21).rotate(self.ang))
         # either mid sensor needs to be a bit in front, or side sensors need to be more back..
 
-        #pg.draw.circle(self.drawSurf, (200,0,200), mid_sensL, 1)
-        #pg.draw.circle(self.drawSurf, (200,0,200), mid_sensR, 1)
-        #pg.draw.circle(self.drawSurf, (200,0,200), left_sensr1, 1)
-        #pg.draw.circle(self.drawSurf, (200,0,200), left_sensr2, 1)
-        #pg.draw.circle(self.drawSurf, (200,0,200), right_sensr1, 1)
-        #pg.draw.circle(self.drawSurf, (200,0,200), right_sensr2, 1)
-
         if self.drawSurf.get_rect().collidepoint(mid_sensL) and self.drawSurf.get_rect().collidepoint(mid_sensR):
             ms_rL = self.drawSurf.get_at(mid_sensL)[:3]
             ms_rR = self.drawSurf.get_at(mid_sensR)[:3]
@@ -84,17 +76,23 @@ class Ant(pg.sprite.Sprite):
             rs_r2 = self.drawSurf.get_at(right_sensr2)[:3]
             right_result = (max(rs_r1[0], rs_r2[0]), max(rs_r1[1], rs_r2[1]), max(rs_r1[2], rs_r2[2]))
 
-        #if mid_result[2] != 0 and mid_result[:2] == (0,0): print(mid_result)
-
-#        if self.pos.distance_to(self.last_phero) > 22 and self.mode != 3: # 20-25 seems best, too high they get distracted
-#            pheromones.add(Trail(self.pos, self.mode))  # + pg.Vector2(-5, 0).rotate(self.ang) # self.groups()[0]
-#            self.last_phero = pg.Vector2(self.rect.center)
-        scaledown_pos = (int((self.pos.x/curW)*(curW/PRATIO)), int((self.pos.y/curH)*(curH/PRATIO)))
-        color_rgb = (0,0,100)
+        psSize = (int(curW/PRATIO), int(curH/PRATIO))
+        scaledown_pos = (int((self.pos.x/curW)*psSize[0]), int((self.pos.y/curH)*psSize[1]))
+        color_rgb = (0,0,240)
         # check if current pos diff from last pos
-        if scaledown_pos != self.last_sdp:
-            self.pheromones.input2grid(scaledown_pos, color_rgb)
+        if scaledown_pos != self.last_sdp and scaledown_pos[0] in range(0,psSize[0]) and scaledown_pos[1] in range(0,psSize[1]):
+            self.phero.input2grid(scaledown_pos, color_rgb)
             self.last_sdp = scaledown_pos
+
+        if mid_result[2] > max(left_result[2], right_result[2]) and mid_result[:2] == (0,0):
+            self.desireDir += pg.Vector2(1,0).rotate(self.ang).normalize() # might not need +=
+            wandrStr = 0
+        elif left_result[2] > right_result[2] and left_result[:2] == (0,0):
+            self.desireDir += pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
+            wandrStr = 0
+        elif right_result[2] > left_result[2] and right_result[:2] == (0,0):
+            self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
+            wandrStr = 0
 
         '''
         if self.mode == 1:
@@ -143,32 +141,61 @@ class Ant(pg.sprite.Sprite):
                 self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize()
                 self.mode = 1
         '''
-
+        '''
         wallColor = (50,50,50)  # avoid walls of this color
-        if mid_result == wallColor:
-            self.desireDir = pg.Vector2(self.desireDir + (-1,0)).rotate(self.ang).normalize()
-            wandrStr = 0
-            steerStr = 5
-            if self.mode == 1 : self.mode = 3
-        elif left_result == wallColor:
-            self.desireDir = pg.Vector2(self.desireDir + (0,1)).rotate(self.ang).normalize()
+        if left_result == wallColor:
+            self.desireDir += pg.Vector2(0,1).rotate(self.ang)
             wandrStr = 0
             steerStr = 4
             if self.mode == 1 : self.mode = 3
         elif right_result == wallColor:
-            self.desireDir = pg.Vector2(self.desireDir + (0,-1)).rotate(self.ang).normalize()
+            self.desireDir += pg.Vector2(0,-1).rotate(self.ang)
             wandrStr = 0
             steerStr = 4
             if self.mode == 1 : self.mode = 3
-
+        elif mid_result == wallColor:
+            self.desireDir += pg.Vector2(-1,0).rotate(self.ang
+            wandrStr = 0
+            steerStr = 5
+            if self.mode == 1 : self.mode = 3
+        '''
         # Avoid edges
+        if not self.drawSurf.get_rect().collidepoint(left_sensr2) and self.drawSurf.get_rect().collidepoint(right_sensr2):
+            self.desireDir += pg.Vector2(0,1).rotate(self.ang)
+            wandrStr = 0
+            steerStr = 4
+        elif not self.drawSurf.get_rect().collidepoint(right_sensr2) and self.drawSurf.get_rect().collidepoint(left_sensr2):
+            self.desireDir += pg.Vector2(0,-1).rotate(self.ang)
+            wandrStr = 0
+            steerStr = 4
+        #elif not self.drawSurf.get_rect().collidepoint(self.pos): #self.drawSurf.get_rect().contains(self.rect):
+        #    self.desireDir = pg.Vector2((curW/2 - self.rect.centerx, curH/2 - self.rect.centery)).normalize()
+        elif not self.drawSurf.get_rect().collidepoint(Vec2.vint(self.pos + pg.Vector2(21, 0).rotate(self.ang))):
+            self.desireDir += pg.Vector2(-1,0).rotate(self.ang)
+            wandrStr = 0
+            steerStr = 5
+
+        '''
         margin = 42
         if min(self.pos.x, self.pos.y, curW - self.pos.x, curH - self.pos.y) < margin:
-            if self.pos.x < margin : self.desireDir = pg.Vector2(self.desireDir + (1,0)).normalize()
-            elif self.pos.x > curW - margin : self.desireDir = pg.Vector2(self.desireDir + (-1,0)).normalize()
-            if self.pos.y < margin : self.desireDir = pg.Vector2(self.desireDir + (0,1)).normalize()
-            elif self.pos.y > curH - margin : self.desireDir = pg.Vector2(self.desireDir + (0,-1)).normalize()
+            if self.pos.x < margin:
+                self.desireDir = pg.Vector2(self.desireDir + (1,0)).normalize()
+            elif self.pos.x > curW - margin:
+                self.desireDir = pg.Vector2(self.desireDir + (-1,0)).normalize()
+            if self.pos.y < margin:
+                self.desireDir = pg.Vector2(self.desireDir + (0,1)).normalize()
+            elif self.pos.y > curH - margin:
+                self.desireDir = pg.Vector2(self.desireDir + (0,-1)).normalize()
             if self.mode == 1 : self.mode = 3
+        '''
+        '''
+        if self.rect.top < 0 or self.rect.bottom > curH:
+            self.desireDir[1] = -self.desireDir[1]
+            self.vel[1] = -self.vel[1]
+        if self.rect.left < 0 or self.rect.right > curW:
+            self.desireDir[0] = -self.desireDir[0]
+            self.vel[0] = -self.vel[0]
+        '''
 
 
         randDir = pg.Vector2(cos(radians(randAng)),sin(radians(randAng)))
@@ -188,28 +215,10 @@ class Ant(pg.sprite.Sprite):
         # actually update position
         self.rect.center = self.pos
 
-#class Trail(pg.sprite.Sprite):
-#    def __init__(self, pos, phero_type):
-#        super().__init__()
-#        self.type = phero_type
-#        self.image = pg.Surface((8, 8))
-#        self.image.fill(0)
-#        self.image.set_colorkey(0)
-#        self.rect = self.image.get_rect(center=pos)
-#        self.str = 500
-#        # maybe if ontop of same color, add color to self, using surface.get_at()
-#    def update(self, dt):
-#        self.str -= (dt/10)*FPS
-#        if self.str < 0:
-#            return self.kill()
-#        evap = self.str/500
-#        self.image.fill(0)
-#        if self.type == 1 : pg.draw.circle(self.image, [0, 0, 90*evap+10], [4, 4], 4)
-#        if self.type == 2 : pg.draw.circle(self.image, [0, 90*evap+10, 0], [4, 4], 4)
 class PheroGrid():
     def __init__(self, bigSize):
-        smallSize = (bigSize[0]/PRATIO, bigSize[1]/PRATIO)
-        self.image = pg.Surface(smallSize).convert()
+        self.surfSize = (bigSize[0]/PRATIO, bigSize[1]/PRATIO)
+        self.image = pg.Surface(self.surfSize).convert()
         self.img_array = np.array(pg.surfarray.array3d(self.image)).astype(np.float64)
 
     def input2grid(self, scaled_pos, color_rgb):
@@ -217,7 +226,7 @@ class PheroGrid():
         self.img_array[self.img_array > 255] = 255
 
     def update(self, dt):
-        self.img_array[self.img_array > 0] -= 0.4 * (60/FPS) * ((dt/10) * FPS)
+        self.img_array[self.img_array > 0] -= 1 * (60/FPS) * ((dt/10) * FPS)
         self.img_array[self.img_array < 1] = 0  # ensure no leftover floats <1
         #a = a.clip(0,255)
         pg.surfarray.blit_array(self.image, self.img_array)
@@ -241,8 +250,6 @@ class Vec2():
 		self.y = y
 	def vint(self):
 		return (int(self.x), int(self.y))
-
-#pheromones = pg.sprite.Group()
 
 def main():
     pg.init()  # prepare window
@@ -300,9 +307,7 @@ def main():
                     foodList = foods.sprites()
 
         dt = clock.tick(FPS) / 100
-        #screen.fill(0) # enable this to show sensor debug spots
 
-        #pheromones.update(dt)
         pheroImg = pheroLayer.update(dt)
 
         workers.update(dt)
