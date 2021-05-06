@@ -97,7 +97,6 @@ class Ant(pg.sprite.Sprite):
             elif right_result[1] > left_result[1] and (right_result[0],right_result[2]) == (0,0):
                 self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = 0
-
         elif self.mode == 2:
             if self.pos.distance_to(self.nest) < 32:
                 self.desireDir += pg.Vector2(-1,0).rotate(self.ang).normalize()
@@ -149,6 +148,19 @@ class Ant(pg.sprite.Sprite):
             if self.mode == 1 : self.mode = 3
 
         # Avoid edges
+        if not self.drawSurf.get_rect().collidepoint(left_sensr2) and self.drawSurf.get_rect().collidepoint(right_sensr2):
+            self.desireDir += pg.Vector2(0,1).rotate(self.ang)
+            wandrStr = 0
+            steerStr = 4
+        elif not self.drawSurf.get_rect().collidepoint(right_sensr2) and self.drawSurf.get_rect().collidepoint(left_sensr2):
+            self.desireDir += pg.Vector2(0,-1).rotate(self.ang)
+            wandrStr = 0
+            steerStr = 4
+        elif not self.drawSurf.get_rect().collidepoint(Vec2.vint(self.pos + pg.Vector2(21, 0).rotate(self.ang))):
+            self.desireDir += pg.Vector2(-1,0).rotate(self.ang)
+            wandrStr = 0
+            steerStr = 5
+        '''
         margin = 42
         if min(self.pos.x, self.pos.y, curW - self.pos.x, curH - self.pos.y) < margin:
             if self.pos.x < margin : self.desireDir = pg.Vector2(self.desireDir + (1,0)).normalize()
@@ -156,6 +168,7 @@ class Ant(pg.sprite.Sprite):
             if self.pos.y < margin : self.desireDir = pg.Vector2(self.desireDir + (0,1)).normalize()
             elif self.pos.y > curH - margin : self.desireDir = pg.Vector2(self.desireDir + (0,-1)).normalize()
             if self.mode == 1 : self.mode = 3
+        '''
 
         randDir = pg.Vector2(cos(radians(randAng)),sin(radians(randAng)))
         self.desireDir = pg.Vector2(self.desireDir + randDir * wandrStr).normalize()

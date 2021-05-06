@@ -54,10 +54,8 @@ class Ant(pg.sprite.Sprite):
         #mid_sensr = vec2round(self.pos + pg.Vector2(20, 0).rotate(self.ang))#.normalize() # directional vec forward
         mid_sensL = self.vint(self.pos + pg.Vector2(21, -3).rotate(self.ang))
         mid_sensR = self.vint(self.pos + pg.Vector2(21, 3).rotate(self.ang))
-        # either mid sensor needs to be a bit in front, or side sensors need to be more back..
         left_sensr1 = self.vint(self.pos + pg.Vector2(18, -14).rotate(self.ang))
         left_sensr2 = self.vint(self.pos + pg.Vector2(16, -21).rotate(self.ang))
-
         right_sensr1 = self.vint(self.pos + pg.Vector2(18, 14).rotate(self.ang))
         right_sensr2 = self.vint(self.pos + pg.Vector2(16, 21).rotate(self.ang))
 
@@ -94,13 +92,26 @@ class Ant(pg.sprite.Sprite):
             wandrStr = 0
 
         # Avoid edges
+        if not self.drawSurf.get_rect().collidepoint(left_sensr2) and self.drawSurf.get_rect().collidepoint(right_sensr2):
+            self.desireDir += pg.Vector2(0,1).rotate(self.ang)
+            wandrStr = 0
+            steerStr = 4
+        elif not self.drawSurf.get_rect().collidepoint(right_sensr2) and self.drawSurf.get_rect().collidepoint(left_sensr2):
+            self.desireDir += pg.Vector2(0,-1).rotate(self.ang)
+            wandrStr = 0
+            steerStr = 4
+        elif not self.drawSurf.get_rect().collidepoint(self.vint(self.pos + pg.Vector2(21, 0).rotate(self.ang))):
+            self.desireDir += pg.Vector2(-1,0).rotate(self.ang)
+            wandrStr = 0
+            steerStr = 5
+        '''
         margin = 42
         if min(self.pos.x, self.pos.y, curW - self.pos.x, curH - self.pos.y) < margin:
             if self.pos.x < margin : self.desireDir = pg.Vector2(self.desireDir + (1,0)).normalize()
             elif self.pos.x > curW - margin : self.desireDir = pg.Vector2(self.desireDir + (-1,0)).normalize()
             if self.pos.y < margin : self.desireDir = pg.Vector2(self.desireDir + (0,1)).normalize()
             elif self.pos.y > curH - margin : self.desireDir = pg.Vector2(self.desireDir + (0,-1)).normalize()
-
+        '''
         randDir = pg.Vector2(cos(radians(randAng)),sin(radians(randAng)))
         self.desireDir = pg.Vector2(self.desireDir + randDir * wandrStr).normalize()
         dzVel = self.desireDir * maxSpeed
@@ -108,10 +119,8 @@ class Ant(pg.sprite.Sprite):
         accel = dzStrFrc if pg.Vector2(dzStrFrc).magnitude() <= steerStr else pg.Vector2(dzStrFrc.normalize() * steerStr)
         velo = self.vel + accel * dt
         self.vel = velo if pg.Vector2(velo).magnitude() <= maxSpeed else pg.Vector2(velo.normalize() * maxSpeed)
-
         self.pos += self.vel * dt
         self.ang = degrees(atan2(self.vel[1],self.vel[0]))
-
         # adjusts angle of img to match heading
         self.image = pg.transform.rotate(self.orig_img, -self.ang)
         self.rect = self.image.get_rect(center=self.rect.center)  # recentering fix
