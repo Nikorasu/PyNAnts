@@ -123,7 +123,7 @@ class Ant(pg.sprite.Sprite):
             elif right_result[2] > left_result[2] and right_result[:2] == (0,0):
                 self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = 0
-            else: # needs work, can't avoid walls.. maybe needs more wandrStr
+            else:
                 self.desireDir += pg.Vector2(self.nest - self.pos).normalize() * .1
                 wandrStr = .1   #pg.Vector2(self.desireDir + (1,0)).rotate(pg.math.Vector2.as_polar(self.nest - self.pos)[1])
         elif self.mode == 3:

@@ -17,7 +17,7 @@ class Ant(pg.sprite.Sprite):
         super().__init__()
         self.drawSurf = drawSurf
         self.nest = nest
-        self.image = pg.Surface((12, 21))#, pg.HWSURFACE)
+        self.image = pg.Surface((12, 21)).convert()#, pg.HWSURFACE)
         self.image.set_colorkey(0)
         cBrown = (80,42,42)
         # Draw Ant
@@ -110,7 +110,7 @@ class Ant(pg.sprite.Sprite):
             elif right_result[2] > left_result[2] and right_result[:2] == (0,0):
                 self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = 0
-            else: # needs work, can't avoid walls.. maybe needs more wandrStr
+            else:
                 self.desireDir += pg.Vector2(self.nest - self.pos).normalize() * .1
                 wandrStr = .1   #pg.Vector2(self.desireDir + (1,0)).rotate(pg.math.Vector2.as_polar(self.nest - self.pos)[1])
         elif self.mode == 3:
@@ -202,13 +202,13 @@ class Trail(pg.sprite.Sprite):
         self.image.fill(0)
         self.image.set_colorkey(0)
         self.rect = self.image.get_rect(center=pos)
-        self.str = 500
+        self.str = 420
         # maybe if ontop of same color, add color to self, using surface.get_at()
     def update(self, dt):
         self.str -= ((dt/10)*FPS) * (60/FPS)
         if self.str < 0:
             return self.kill()
-        evap = self.str/500
+        evap = self.str/420
         self.image.fill(0)
         if self.type == 1 : pg.draw.circle(self.image, [0, 0, 90*evap+10], [4, 4], 4)
         if self.type == 2 : pg.draw.circle(self.image, [0, 90*evap+10, 0], [4, 4], 4)
