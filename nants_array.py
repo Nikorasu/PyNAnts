@@ -8,7 +8,7 @@ NAnts
 Copyright (c) 2021  Nikolaus Stromberg  nikorasu85@gmail.com
 '''
 FLLSCRN = True          # True for Fullscreen, or False for Window.
-ANTS = 200              # Number of Ants to spawn.
+ANTS = 100              # Number of Ants to spawn.
 WIDTH = 1200            # default 1200
 HEIGHT = 800            # default 800
 FPS = 60                # 48-90
@@ -45,24 +45,15 @@ class Ant(pg.sprite.Sprite):
     def update(self, dt):  # behavior
         curW, curH = self.drawSurf.get_size()
         mid_result = left_result = right_result = [0,0,0]
-        mid_A_result = left_A_result = right_A_result = [0,0,0]
+        mid_GA_result = left_GA_result = right_GA_result = [0,0,0]
         randAng = randint(0,360)
         accel = pg.Vector2(0,0)
         wandrStr = .13
         maxSpeed = 12
         steerStr = 3  # 3 or 4
 
-        if self.mode == 0 and self.pos.distance_to(self.nest) > 42:
-            self.mode = 1
-
         psSize = (int(curW/PRATIO), int(curH/PRATIO))
         scaledown_pos = (int((self.pos.x/curW)*psSize[0]), int((self.pos.y/curH)*psSize[1]))
-        color_rgb = (0,0,200)
-        # check if current pos diff from last pos
-        if scaledown_pos != self.last_sdp and scaledown_pos[0] in range(0,psSize[0]) and scaledown_pos[1] in range(0,psSize[1]):
-            #self.phero.input2grid(scaledown_pos, color_rgb)
-            self.phero.img_array[scaledown_pos] += color_rgb
-            self.last_sdp = scaledown_pos
 
         #mid_sensr = vec2round(self.pos + pg.Vector2(20, 0).rotate(self.ang))#.normalize() # directional vec forward
         mid_sensL = Vec2.vint(self.pos + pg.Vector2(21, -3).rotate(self.ang))
@@ -74,101 +65,128 @@ class Ant(pg.sprite.Sprite):
         # either mid sensor needs to be a bit in front, or side sensors need to be more back..
 
         if self.drawSurf.get_rect().collidepoint(mid_sensL) and self.drawSurf.get_rect().collidepoint(mid_sensR):
-            #mid_L_sdpos = (int((mid_sensL[0]/curW)*psSize[0]), int((mid_sensL[1]/curH)*psSize[1]))
-            #mid_L_result = self.phero.img_array[mid_L_sdpos]
-            #mid_R_sdpos = (int((mid_sensR[0]/curW)*psSize[0]), int((mid_sensR[1]/curH)*psSize[1]))
-            #mid_R_result = self.phero.img_array[mid_R_sdpos]
-            #mid_A_result = (max(mid_L_result[0], mid_R_result[0]), max(mid_L_result[1], mid_R_result[1]), max(mid_L_result[2], mid_R_result[2]))
-            mid_A_result = self.sensArray(mid_sensL, mid_sensR)
-            #mid_gaL = self.drawSurf.get_at(mid_sensL)[:3]
-            #mid_gaR = self.drawSurf.get_at(mid_sensR)[:3]
-            #mid_result = (max(mid_gaL[0], mid_gaR[0]), max(mid_gaL[1], mid_gaR[1]), max(mid_gaL[2], mid_gaR[2]))
-            mid_result = self.sensGA(mid_sensL, mid_sensR)
+            mid_result = self.sensArray(mid_sensL, mid_sensR)
+            mid_GA_result = self.sensGA(mid_sensL, mid_sensR)
         if self.drawSurf.get_rect().collidepoint(left_sens1) and self.drawSurf.get_rect().collidepoint(left_sens2):
-            left_A_result = self.sensArray(left_sens1, left_sens2)
-            #left_ga1 = self.drawSurf.get_at(left_sens1)[:3]
-            #left_ga2 = self.drawSurf.get_at(left_sens2)[:3]
-            #left_result = (max(left_ga1[0], left_ga2[0]), max(left_ga1[1], left_ga2[1]), max(left_ga1[2], left_ga2[2]))
-            left_result = self.sensGA(left_sens1, left_sens2)
+            left_result = self.sensArray(left_sens1, left_sens2)
+            left_GA_result = self.sensGA(left_sens1, left_sens2)
         if self.drawSurf.get_rect().collidepoint(right_sens1) and self.drawSurf.get_rect().collidepoint(right_sens2):
-            right_A_result = self.sensArray(right_sens1, right_sens2)
-            #right_ga1 = self.drawSurf.get_at(right_sens1)[:3]
-            #right_ga2 = self.drawSurf.get_at(right_sens2)[:3]
-            #right_result = (max(right_ga1[0], right_ga2[0]), max(right_ga1[1], right_ga2[1]), max(right_ga1[2], right_ga2[2]))
-            right_result = self.sensGA(right_sens1, right_sens2)
-        # INSTEAD OF get_at, try checking Array color at sensor spot equivalent scaledown locations
-
-
-        if mid_A_result[2] > max(left_A_result[2], right_A_result[2]) and mid_A_result[:2] == (0,0):
+            right_result = self.sensArray(right_sens1, right_sens2)
+            right_GA_result = self.sensGA(right_sens1, right_sens2)
+        '''
+        color_rgb = (0,0,200)
+        # check if current pos diff from last pos
+        if scaledown_pos != self.last_sdp and scaledown_pos[0] in range(0,psSize[0]) and scaledown_pos[1] in range(0,psSize[1]):
+            #self.phero.input2grid(scaledown_pos, color_rgb)
+            self.phero.img_array[scaledown_pos] += color_rgb
+            self.last_sdp = scaledown_pos
+        #
+        if mid_result[2] > max(left_result[2], right_result[2]): #and mid_result[:2] == (0,0):
             self.desireDir += pg.Vector2(1,0).rotate(self.ang).normalize() # might not need +=
             wandrStr = .01
-        elif left_A_result[2] > right_A_result[2] and left_A_result[:2] == (0,0):
+        elif left_result[2] > right_result[2]: #and left_result[:2] == (0,0):
             self.desireDir += pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
             wandrStr = .01
-        elif right_A_result[2] > left_A_result[2] and right_A_result[:2] == (0,0):
+        elif right_result[2] > left_result[2]: #and right_result[:2] == (0,0):
             self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
             wandrStr = .01
-
         '''
-        if self.mode == 1:
-            if mid_result == (2,150,2): # if food
-                self.desireDir += pg.Vector2(-1,0).rotate(self.ang).normalize()
-                self.mode = 2
-            elif mid_result[1] > max(left_result[1], right_result[1]) and (mid_result[0],mid_result[2]) == (0,0):
+        foodColor = (2,150,2)
+
+        if self.mode == 0 and self.pos.distance_to(self.nest) > 24:
+            self.mode = 1
+
+        elif self.mode == 1:
+            setAcolor = (0,0,100)
+            if scaledown_pos != self.last_sdp and scaledown_pos[0] in range(0,psSize[0]) and scaledown_pos[1] in range(0,psSize[1]):
+                self.phero.img_array[scaledown_pos] += setAcolor
+                self.last_sdp = scaledown_pos
+            if mid_result[1] > max(left_result[1], right_result[1]): #and (mid_result[0],mid_result[2]) == (0,0):
                 self.desireDir += pg.Vector2(1,0).rotate(self.ang).normalize()
                 wandrStr = .1
-            elif left_result[1] > right_result[1] and (left_result[0],left_result[2]) == (0,0):
+            elif left_result[1] > right_result[1]: #and (left_result[0],left_result[2]) == (0,0):
                 self.desireDir += pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
                 wandrStr = .1
-            elif right_result[1] > left_result[1] and (right_result[0],right_result[2]) == (0,0):
+            elif right_result[1] > left_result[1]: #and (right_result[0],right_result[2]) == (0,0):
                 self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = .1
+            if left_GA_result[1] == foodColor and right_GA_result[1] != foodColor :
+                self.desireDir += pg.Vector2(0,-1).rotate(self.ang).normalize() #left (0,-1)
+                wandrStr = .1
+            elif right_GA_result[1] == foodColor and left_GA_result[1] != foodColor:
+                self.desireDir += pg.Vector2(0,1).rotate(self.ang).normalize() #right (0, 1)
+                wandrStr = .1
+            elif mid_GA_result == foodColor: # if food
+                self.desireDir = pg.Vector2(self.nest - self.pos).normalize() #pg.Vector2(-1,0).rotate(self.ang).normalize()
+                self.lastFood = self.pos + pg.Vector2(21, 0).rotate(self.ang)
+                wandrStr = .01
+                steerStr = 5
+                self.mode = 2
+
         elif self.mode == 2:
-            if self.pos.distance_to(self.nest) < 32:
-                self.desireDir += pg.Vector2(-1,0).rotate(self.ang).normalize()
+            setAcolor = (0,100,0)
+            if scaledown_pos != self.last_sdp and scaledown_pos[0] in range(0,psSize[0]) and scaledown_pos[1] in range(0,psSize[1]):
+                self.phero.img_array[scaledown_pos] += setAcolor
+                self.last_sdp = scaledown_pos
+            if self.pos.distance_to(self.nest) < 24:
+                self.desireDir = pg.Vector2(self.lastFood - self.pos).normalize()
+                wandrStr = .01
+                steerStr = 5
                 self.mode = 1
-            elif mid_result[2] > max(left_result[2], right_result[2]) and mid_result[:2] == (0,0):
+            elif mid_result[2] > max(left_result[2], right_result[2]): #and mid_result[:2] == (0,0):
                 self.desireDir += pg.Vector2(1,0).rotate(self.ang).normalize()
                 wandrStr = .1
-            elif left_result[2] > right_result[2] and left_result[:2] == (0,0):
+            elif left_result[2] > right_result[2]: #and left_result[:2] == (0,0):
                 self.desireDir += pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
                 wandrStr = .1
-            elif right_result[2] > left_result[2] and right_result[:2] == (0,0):
+            elif right_result[2] > left_result[2]: #and right_result[:2] == (0,0):
                 self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = .1
             else:
-                self.desireDir += pg.Vector2(self.nest - self.pos).normalize() * .1
+                self.desireDir += pg.Vector2(self.nest - self.pos).normalize() * .2
                 wandrStr = .1   #pg.Vector2(self.desireDir + (1,0)).rotate(pg.math.Vector2.as_polar(self.nest - self.pos)[1])
-        elif self.mode == 3:
-            if mid_result == (2,150,2): # if food
-                self.desireDir += pg.Vector2(-1,0).rotate(self.ang).normalize()
-                self.mode = 2
-            elif mid_result[1] > max(left_result[1], right_result[1]) and (mid_result[0],mid_result[2]) == (0,0):
-                self.desireDir += pg.Vector2(1,0).rotate(self.ang).normalize()
-                wandrStr = .1
-            elif left_result[1] > right_result[1] and (left_result[0],left_result[2]) == (0,0):
-                self.desireDir += pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
-                wandrStr = .1
-            elif right_result[1] > left_result[1] and (right_result[0],right_result[2]) == (0,0):
-                self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
-                wandrStr = .1
-            if self.pos.distance_to(self.nest) < 32:
+
+        elif self.mode == 3: # look for food, but don't leave trail
+            if self.pos.distance_to(self.nest) < 24:
                 self.desireDir += pg.Vector2(-1,0).rotate(self.ang).normalize()
                 self.mode = 1
-        '''
+            if mid_result[1] > max(left_result[1], right_result[1]): #and (mid_result[0],mid_result[2]) == (0,0):
+                self.desireDir += pg.Vector2(1,0).rotate(self.ang).normalize()
+                wandrStr = .1
+            elif left_result[1] > right_result[1]: #and (left_result[0],left_result[2]) == (0,0):
+                self.desireDir += pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
+                wandrStr = .1
+            elif right_result[1] > left_result[1]: #and (right_result[0],right_result[2]) == (0,0):
+                self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
+                wandrStr = .1
+            #else:
+            #    self.desireDir += pg.Vector2(self.nest - self.pos).normalize() * .1
+            #    wandrStr = .1
+            if left_GA_result[1] == foodColor and right_GA_result[1] != foodColor :
+                self.desireDir += pg.Vector2(0,-1).rotate(self.ang).normalize() #left (0,-1)
+                wandrStr = .1
+            elif right_GA_result[1] == foodColor and left_GA_result[1] != foodColor:
+                self.desireDir += pg.Vector2(0,1).rotate(self.ang).normalize() #right (0, 1)
+                wandrStr = .1
+            elif mid_GA_result == foodColor: # if food
+                self.desireDir = pg.Vector2(self.nest - self.pos).normalize() #pg.Vector2(-1,0).rotate(self.ang).normalize()
+                self.lastFood = self.pos + pg.Vector2(21, 0).rotate(self.ang)
+                wandrStr = .01
+                steerStr = 5
+                self.mode = 2
 
         wallColor = (50,50,50)  # avoid walls of this color
-        if left_result == wallColor:
+        if left_GA_result == wallColor:
             self.desireDir += pg.Vector2(0,1).rotate(self.ang) #.normalize()
             wandrStr = .1
             steerStr = 4
             if self.mode == 1 : self.mode = 3
-        elif right_result == wallColor:
+        elif right_GA_result == wallColor:
             self.desireDir += pg.Vector2(0,-1).rotate(self.ang) #.normalize()
             wandrStr = .1
             steerStr = 4
             if self.mode == 1 : self.mode = 3
-        elif mid_result == wallColor:
+        elif mid_GA_result == wallColor:
             self.desireDir += pg.Vector2(-2,0).rotate(self.ang) #.normalize()
             wandrStr = .1
             steerStr = 4
@@ -179,14 +197,17 @@ class Ant(pg.sprite.Sprite):
             self.desireDir += pg.Vector2(0,1).rotate(self.ang) #.normalize()
             wandrStr = .01
             steerStr = 4
+            if self.mode == 1 : self.mode = 3
         elif not self.drawSurf.get_rect().collidepoint(right_sens2) and self.drawSurf.get_rect().collidepoint(left_sens2):
             self.desireDir += pg.Vector2(0,-1).rotate(self.ang) #.normalize()
             wandrStr = .01
             steerStr = 4
+            if self.mode == 1 : self.mode = 3
         elif not self.drawSurf.get_rect().collidepoint(Vec2.vint(self.pos + pg.Vector2(21, 0).rotate(self.ang))):
             self.desireDir += pg.Vector2(-1,0).rotate(self.ang) #.normalize()
             wandrStr = .01
             steerStr = 5
+            if self.mode == 1 : self.mode = 3
         #elif not self.drawSurf.get_rect().collidepoint(self.pos): #self.drawSurf.get_rect().contains(self.rect):
         #    self.desireDir = pg.Vector2((curW/2 - self.rect.centerx, curH/2 - self.rect.centery)).normalize()
         '''
@@ -233,7 +254,7 @@ class PheroGrid():
         self.image = pg.Surface(self.surfSize).convert()
         self.img_array = np.array(pg.surfarray.array3d(self.image)).astype(np.float64)
     def update(self, dt):
-        self.img_array[self.img_array > 0] -= .9 * (60/FPS) * ((dt/10) * FPS)
+        self.img_array[self.img_array > 0] -= .5 * (60/FPS) * ((dt/10) * FPS)
         self.img_array[self.img_array < 1] = 0  # ensure no leftover floats <1
         self.img_array[self.img_array > 255] = 255  # ensures nothing over 255
         pg.surfarray.blit_array(self.image, self.img_array)
@@ -307,7 +328,7 @@ def main():
                     foodList.extend(foods.sprites())
                 if e.button == 3:
                     for fbit in foodList:
-                        if pg.Vector2(mousepos).distance_to(fbit.rect.center) < fRadius:
+                        if pg.Vector2(mousepos).distance_to(fbit.rect.center) < fRadius+5:
                             fbit.pickup()
                     foodList = foods.sprites()
 
@@ -329,7 +350,7 @@ def main():
         pg.draw.circle(screen, [60,30,30], (nest[0],nest[1]+2), 12, 4)
         pg.draw.circle(screen, [70,40,40], nest, 16, 5)
 
-        pg.draw.rect(screen, (50,50,50), [900, 300, 50, 400]) #wall
+        #pg.draw.rect(screen, (50,50,50), [900, 300, 50, 400]) #wall
 
         workers.draw(screen)
         pg.display.update()
