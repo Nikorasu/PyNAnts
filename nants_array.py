@@ -15,9 +15,12 @@ FPS = 60                # 48-90
 PRATIO = 5              # Pixel Size for Pheromone grid
 
 class Ant(pg.sprite.Sprite):
-    def __init__(self, drawSurf, nest, pheroLayer):
+    def __init__(self, antNum, drawSurf, nest, pheroLayer):
         super().__init__()
+        self.antID = antNum
         self.drawSurf = drawSurf
+        self.curW, self.curH = self.drawSurf.get_size()
+        self.pgSize = (int(self.curW/PRATIO), int(self.curH/PRATIO))
         self.phero = pheroLayer
         self.nest = nest
         self.image = pg.Surface((12, 21)).convert()
@@ -43,7 +46,6 @@ class Ant(pg.sprite.Sprite):
         self.mode = 0
 
     def update(self, dt):  # behavior
-        curW, curH = self.drawSurf.get_size()
         mid_result = left_result = right_result = [0,0,0]
         mid_GA_result = left_GA_result = right_GA_result = [0,0,0]
         randAng = randint(0,360)
@@ -52,8 +54,8 @@ class Ant(pg.sprite.Sprite):
         maxSpeed = 12
         steerStr = 3  # 3 or 4
 
-        psSize = (int(curW/PRATIO), int(curH/PRATIO))
-        scaledown_pos = (int((self.pos.x/curW)*psSize[0]), int((self.pos.y/curH)*psSize[1]))
+        self.pgSize = (int(self.curW/PRATIO), int(self.curH/PRATIO))
+        scaledown_pos = (int((self.pos.x/self.curW)*self.pgSize[0]), int((self.pos.y/self.curH)*self.pgSize[1]))
 
         #mid_sensr = vec2round(self.pos + pg.Vector2(20, 0).rotate(self.ang))#.normalize() # directional vec forward
         mid_sensL = Vec2.vint(self.pos + pg.Vector2(21, -3).rotate(self.ang))
@@ -65,18 +67,16 @@ class Ant(pg.sprite.Sprite):
         # either mid sensor needs to be a bit in front, or side sensors need to be more back..
 
         if self.drawSurf.get_rect().collidepoint(mid_sensL) and self.drawSurf.get_rect().collidepoint(mid_sensR):
-            mid_result = self.sensArray(mid_sensL, mid_sensR)
-            mid_GA_result = self.sensGA(mid_sensL, mid_sensR)
+            mid_result, mid_isID, mid_GA_result = self.sensCheck(mid_sensL, mid_sensR)
         if self.drawSurf.get_rect().collidepoint(left_sens1) and self.drawSurf.get_rect().collidepoint(left_sens2):
-            left_result = self.sensArray(left_sens1, left_sens2)
-            left_GA_result = self.sensGA(left_sens1, left_sens2)
+            left_result, left_isID, left_GA_result = self.sensCheck(left_sens1, left_sens2)
         if self.drawSurf.get_rect().collidepoint(right_sens1) and self.drawSurf.get_rect().collidepoint(right_sens2):
-            right_result = self.sensArray(right_sens1, right_sens2)
-            right_GA_result = self.sensGA(right_sens1, right_sens2)
+            right_result, right_isID, right_GA_result = self.sensCheck(right_sens1, right_sens2)
+
         '''
         color_rgb = (0,0,200)
         # check if current pos diff from last pos
-        if scaledown_pos != self.last_sdp and scaledown_pos[0] in range(0,psSize[0]) and scaledown_pos[1] in range(0,psSize[1]):
+        if scaledown_pos != self.last_sdp and scaledown_pos[0] in range(0,self.pgSize[0]) and scaledown_pos[1] in range(0,self.pgSize[1]):
             #self.phero.input2grid(scaledown_pos, color_rgb)
             self.phero.img_array[scaledown_pos] += color_rgb
             self.last_sdp = scaledown_pos
@@ -92,14 +92,16 @@ class Ant(pg.sprite.Sprite):
             wandrStr = .01
         '''
         foodColor = (2,150,2)
+        cLevel = 50
 
         if self.mode == 0 and self.pos.distance_to(self.nest) > 24:
             self.mode = 1
 
         elif self.mode == 1:
-            setAcolor = (0,0,100)
-            if scaledown_pos != self.last_sdp and scaledown_pos[0] in range(0,psSize[0]) and scaledown_pos[1] in range(0,psSize[1]):
+            setAcolor = (0,0,cLevel)
+            if scaledown_pos != self.last_sdp and scaledown_pos[0] in range(0,self.pgSize[0]) and scaledown_pos[1] in range(0,self.pgSize[1]):
                 self.phero.img_array[scaledown_pos] += setAcolor
+                self.phero.pixelID[scaledown_pos] = self.antID
                 self.last_sdp = scaledown_pos
             if mid_result[1] > max(left_result[1], right_result[1]): #and (mid_result[0],mid_result[2]) == (0,0):
                 self.desireDir += pg.Vector2(1,0).rotate(self.ang).normalize()
@@ -110,10 +112,10 @@ class Ant(pg.sprite.Sprite):
             elif right_result[1] > left_result[1]: #and (right_result[0],right_result[2]) == (0,0):
                 self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = .1
-            if left_GA_result[1] == foodColor and right_GA_result[1] != foodColor :
+            if left_GA_result == foodColor and right_GA_result != foodColor :
                 self.desireDir += pg.Vector2(0,-1).rotate(self.ang).normalize() #left (0,-1)
                 wandrStr = .1
-            elif right_GA_result[1] == foodColor and left_GA_result[1] != foodColor:
+            elif right_GA_result == foodColor and left_GA_result != foodColor:
                 self.desireDir += pg.Vector2(0,1).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = .1
             elif mid_GA_result == foodColor: # if food
@@ -124,8 +126,8 @@ class Ant(pg.sprite.Sprite):
                 self.mode = 2
 
         elif self.mode == 2:
-            setAcolor = (0,100,0)
-            if scaledown_pos != self.last_sdp and scaledown_pos[0] in range(0,psSize[0]) and scaledown_pos[1] in range(0,psSize[1]):
+            setAcolor = (0,cLevel,0)
+            if scaledown_pos != self.last_sdp and scaledown_pos[0] in range(0,self.pgSize[0]) and scaledown_pos[1] in range(0,self.pgSize[1]):
                 self.phero.img_array[scaledown_pos] += setAcolor
                 self.last_sdp = scaledown_pos
             if self.pos.distance_to(self.nest) < 24:
@@ -133,13 +135,13 @@ class Ant(pg.sprite.Sprite):
                 wandrStr = .01
                 steerStr = 5
                 self.mode = 1
-            elif mid_result[2] > max(left_result[2], right_result[2]): #and mid_result[:2] == (0,0):
+            elif mid_result[2] > max(left_result[2], right_result[2]) and mid_isID: #and mid_result[:2] == (0,0):
                 self.desireDir += pg.Vector2(1,0).rotate(self.ang).normalize()
                 wandrStr = .1
-            elif left_result[2] > right_result[2]: #and left_result[:2] == (0,0):
+            elif left_result[2] > right_result[2] and left_isID: #and left_result[:2] == (0,0):
                 self.desireDir += pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
                 wandrStr = .1
-            elif right_result[2] > left_result[2]: #and right_result[:2] == (0,0):
+            elif right_result[2] > left_result[2] and right_isID: #and right_result[:2] == (0,0):
                 self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = .1
             else:
@@ -234,33 +236,39 @@ class Ant(pg.sprite.Sprite):
         # actually update position
         self.rect.center = self.pos
 
-    def sensArray(self, sens_pos1, sens_pos2):
-        curW, curH = self.drawSurf.get_size()
-        psSize = (int(curW/PRATIO), int(curH/PRATIO))
-        sdpos1 = (int((sens_pos1[0]/curW)*psSize[0]), int((sens_pos1[1]/curH)*psSize[1]))
-        result1 = self.phero.img_array[sdpos1]
-        sdpos2 = (int((sens_pos2[0]/curW)*psSize[0]), int((sens_pos2[1]/curH)*psSize[1]))
-        result2 = self.phero.img_array[sdpos2]
-        return (max(result1[0], result2[0]), max(result1[1], result2[1]), max(result1[2], result2[2]))
+    def sensCheck(self, pos1, pos2):
+        sdpos1 = (int((pos1[0]/self.curW)*self.pgSize[0]), int((pos1[1]/self.curH)*self.pgSize[1]))
+        sdpos2 = (int((pos2[0]/self.curW)*self.pgSize[0]), int((pos2[1]/self.curH)*self.pgSize[1]))
+        array_r1 = self.phero.img_array[sdpos1]
+        array_r2 = self.phero.img_array[sdpos2]
+        array_result = (max(array_r1[0], array_r2[0]), max(array_r1[1], array_r2[1]), max(array_r1[2], array_r2[2]))
 
-    def sensGA(self, ga_pos1, ga_pos2):
-        ga_r1 = self.drawSurf.get_at(ga_pos1)[:3]
-        ga_r2 = self.drawSurf.get_at(ga_pos2)[:3]
-        return (max(ga_r1[0], ga_r2[0]), max(ga_r1[1], ga_r2[1]), max(ga_r1[2], ga_r2[2]))
+        is1ID = self.phero.pixelID[sdpos1] == self.antID
+        is2ID = self.phero.pixelID[sdpos2] == self.antID
+        isID = is1ID or is2ID
+
+        ga_r1 = self.drawSurf.get_at(pos1)[:3]
+        ga_r2 = self.drawSurf.get_at(pos2)[:3]
+        ga_result = (max(ga_r1[0], ga_r2[0]), max(ga_r1[1], ga_r2[1]), max(ga_r1[2], ga_r2[2]))
+
+        return array_result, isID, ga_result
 
 class PheroGrid():
     def __init__(self, bigSize):
-        self.surfSize = (bigSize[0]/PRATIO, bigSize[1]/PRATIO)
+        self.surfSize = (int(bigSize[0]/PRATIO), int(bigSize[1]/PRATIO))
         self.image = pg.Surface(self.surfSize).convert()
         self.img_array = np.array(pg.surfarray.array3d(self.image)).astype(np.float64)
+        self.pixelID = np.zeros(self.surfSize)
     def update(self, dt):
-        self.img_array[self.img_array > 0] -= .5 * (60/FPS) * ((dt/10) * FPS)
-        self.img_array[self.img_array < 1] = 0  # ensure no leftover floats <1
-        self.img_array[self.img_array > 255] = 255  # ensures nothing over 255
+        self.img_array -= .2 * (60/FPS) * ((dt/10) * FPS) #[self.img_array > 0]
+        self.img_array = self.img_array.clip(0,255)
+        self.pixelID[ (self.img_array == (0, 0, 0))[:, :, 0] ] = 0
+        #indices = (img_array == (0, 0, 0))[:, :, 0]
+        #pixelID[indices] = 0
+        #self.img_array[self.img_array < 1] = 0  # ensure no leftover floats <1
+        #self.img_array[self.img_array > 255] = 255  # ensures nothing over 255
         pg.surfarray.blit_array(self.image, self.img_array)
         return self.image
-#    def input2grid(self, scaled_pos, color_rgb):
-#        self.img_array[scaled_pos] += color_rgb
 
 class Food(pg.sprite.Sprite):
     def __init__(self, pos):
@@ -303,7 +311,7 @@ def main():
     pheroLayer = PheroGrid(screenSize)
 
     for n in range(ANTS):
-        workers.add(Ant(screen, nest, pheroLayer))
+        workers.add(Ant(n, screen, nest, pheroLayer))
 
     foodList = []
     foods = pg.sprite.Group()
