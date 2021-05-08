@@ -7,8 +7,8 @@ import numpy as np
 NAnts
 Copyright (c) 2021  Nikolaus Stromberg  nikorasu85@gmail.com
 '''
-FLLSCRN = True          # True for Fullscreen, or False for Window.
-ANTS = 100              # Number of Ants to spawn.
+FLLSCRN = False          # True for Fullscreen, or False for Window.
+ANTS = 80              # Number of Ants to spawn.
 WIDTH = 1200            # default 1200
 HEIGHT = 800            # default 800
 FPS = 60                # 48-90
@@ -73,24 +73,6 @@ class Ant(pg.sprite.Sprite):
         if self.drawSurf.get_rect().collidepoint(right_sens1) and self.drawSurf.get_rect().collidepoint(right_sens2):
             right_result, right_isID, right_GA_result = self.sensCheck(right_sens1, right_sens2)
 
-        '''
-        color_rgb = (0,0,200)
-        # check if current pos diff from last pos
-        if scaledown_pos != self.last_sdp and scaledown_pos[0] in range(0,self.pgSize[0]) and scaledown_pos[1] in range(0,self.pgSize[1]):
-            #self.phero.input2grid(scaledown_pos, color_rgb)
-            self.phero.img_array[scaledown_pos] += color_rgb
-            self.last_sdp = scaledown_pos
-        #
-        if mid_result[2] > max(left_result[2], right_result[2]): #and mid_result[:2] == (0,0):
-            self.desireDir += pg.Vector2(1,0).rotate(self.ang).normalize() # might not need +=
-            wandrStr = .01
-        elif left_result[2] > right_result[2]: #and left_result[:2] == (0,0):
-            self.desireDir += pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
-            wandrStr = .01
-        elif right_result[2] > left_result[2]: #and right_result[:2] == (0,0):
-            self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
-            wandrStr = .01
-        '''
         foodColor = (2,150,2)
         cLevel = 50
 
@@ -119,7 +101,7 @@ class Ant(pg.sprite.Sprite):
                 self.desireDir += pg.Vector2(0,1).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = .1
             elif mid_GA_result == foodColor: # if food
-                self.desireDir = pg.Vector2(self.nest - self.pos).normalize() #pg.Vector2(-1,0).rotate(self.ang).normalize()
+                self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize() #pg.Vector2(self.nest - self.pos).normalize()
                 self.lastFood = self.pos + pg.Vector2(21, 0).rotate(self.ang)
                 wandrStr = .01
                 steerStr = 5
@@ -145,7 +127,7 @@ class Ant(pg.sprite.Sprite):
                 self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = .1
             else:
-                self.desireDir += pg.Vector2(self.nest - self.pos).normalize() * .2
+                self.desireDir += pg.Vector2(self.nest - self.pos).normalize() * .1
                 wandrStr = .1   #pg.Vector2(self.desireDir + (1,0)).rotate(pg.math.Vector2.as_polar(self.nest - self.pos)[1])
 
         elif self.mode == 3: # look for food, but don't leave trail
@@ -220,7 +202,6 @@ class Ant(pg.sprite.Sprite):
             self.desireDir[0] = -self.desireDir[0]
             self.vel[0] = -self.vel[0]
         '''
-
         randDir = pg.Vector2(cos(radians(randAng)),sin(radians(randAng)))
         self.desireDir = pg.Vector2(self.desireDir + randDir * wandrStr).normalize()
         dzVel = self.desireDir * maxSpeed
@@ -260,9 +241,9 @@ class PheroGrid():
         self.img_array = np.array(pg.surfarray.array3d(self.image)).astype(np.float64)
         self.pixelID = np.zeros(self.surfSize)
     def update(self, dt):
-        self.img_array -= .2 * (60/FPS) * ((dt/10) * FPS) #[self.img_array > 0]
+        self.img_array -= .1 * (60/FPS) * ((dt/10) * FPS) #[self.img_array > 0]
         self.img_array = self.img_array.clip(0,255)
-        self.pixelID[ (self.img_array == (0, 0, 0))[:, :, 0] ] = 0
+        #self.pixelID[ (self.img_array == (0, 0, 0))[:, :, 0] ] = 0  # not sure if works
         #indices = (img_array == (0, 0, 0))[:, :, 0]
         #pixelID[indices] = 0
         #self.img_array[self.img_array < 1] = 0  # ensure no leftover floats <1
