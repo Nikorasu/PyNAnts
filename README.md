@@ -9,7 +9,7 @@ with Pygame2 and Numpy.
 
 
 **To use** save the `nants.py` file somewhere, and run via python.
-(Example run command: `python3 nants_array.py`)
+(Example run command: `python3 nants.py`)
 
 Left mouse click places food, right click removes food.
 
@@ -22,7 +22,6 @@ although it alters how their pathfinding logic may work.
 
 ToDo list of things that need improving/implementing:
 - Obstacle/wall avoidance, especially when heading home to nest.
-- Ants need to properly find and follow their own to-home trail.
 - Food particles don't pickup/remove yet when ants 'grab' them.
 
 If you have any suggestions for how to improve these, please contact me!
