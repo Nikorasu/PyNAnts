@@ -3,11 +3,11 @@ from math import pi, sin, cos, atan2, radians, degrees
 from random import randint
 import pygame as pg
 '''
-NAnts
+NAnts - Ants simply make dot-trails, and follow others. Looks cool!
 Copyright (c) 2021  Nikolaus Stromberg  nikorasu85@gmail.com
 '''
-FLLSCRN = True         # True for Fullscreen, or False for Window.
-ANTS = 100              # Number of Ants to spawn.
+FLLSCRN = False         # True for Fullscreen, or False for Window.
+ANTS = 80               # Number of Ants to spawn.
 WIDTH = 1200            # default 1200
 HEIGHT = 800            # default 800
 FPS = 60                # 48-90

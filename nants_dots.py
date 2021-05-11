@@ -3,14 +3,14 @@ from math import pi, sin, cos, atan2, radians, degrees
 from random import randint
 import pygame as pg
 '''
-NAnts
+NAnts - Old attempt to find food using dot pheromone trails. Barely kinda works.
 Copyright (c) 2021  Nikolaus Stromberg  nikorasu85@gmail.com
 '''
-FLLSCRN = True         # True for Fullscreen, or False for Window.
-ANTS = 100              # Number of Ants to spawn.
+FLLSCRN = False         # True for Fullscreen, or False for Window.
+ANTS = 80               # Number of Ants to spawn.
 WIDTH = 1200            # default 1200
 HEIGHT = 800            # default 800
-FPS = 48                # 48-90
+FPS = 60                # 48-90
 
 class Ant(pg.sprite.Sprite):
     def __init__(self, drawSurf, nest):
@@ -111,7 +111,7 @@ class Ant(pg.sprite.Sprite):
                 self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = 0
             else:
-                self.desireDir += pg.Vector2(self.nest - self.pos).normalize() * .1
+                self.desireDir += pg.Vector2(self.nest - self.pos).normalize() * .5
                 wandrStr = .1   #pg.Vector2(self.desireDir + (1,0)).rotate(pg.math.Vector2.as_polar(self.nest - self.pos)[1])
         elif self.mode == 3:
             if mid_result == (2,150,2): # if food
@@ -296,7 +296,7 @@ def main():
         pg.draw.circle(screen, [50,30,30], (nest[0],nest[1]+2), 12, 4)
         pg.draw.circle(screen, [60,40,40], nest, 16, 5)
 
-        pg.draw.rect(screen, (50,50,50), [1000, 300, 42, 400])
+        #pg.draw.rect(screen, (50,50,50), [1000, 300, 42, 400])
 
         workers.draw(screen)
         pg.display.update()
