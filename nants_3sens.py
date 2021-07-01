@@ -14,6 +14,7 @@ HEIGHT = 800            # default 800
 FPS = 60                # 48-90
 VSYNC = True            # limit frame rate to refresh rate
 PRATIO = 5              # Pixel Size for Pheromone grid, 5 is best
+SHOWFPS = True          # show framerate debug
 
 class Ant(pg.sprite.Sprite):
     def __init__(self, drawSurf, nest, pheroLayer):
@@ -51,7 +52,7 @@ class Ant(pg.sprite.Sprite):
         mid_GA_result = left_GA_result = right_GA_result = [0,0,0]
         randAng = randint(0,360)
         accel = pg.Vector2(0,0)
-        foodColor = (2,150,2)  # color of food to look for
+        foodColor = (20,150,2)  # color of food to look for
         wandrStr = .12  # how random they walk around
         maxSpeed = 12  # 10-12 seems ok
         steerStr = 3  # 3 or 4, dono
@@ -60,8 +61,8 @@ class Ant(pg.sprite.Sprite):
         #scaledown_pos = (int((self.pos.x/self.curW)*self.pgSize[0]), int((self.pos.y/self.curH)*self.pgSize[1]))
         # Get locations to check as sensor points, in pairs for better detection.
         mid_sens = Vec2.vint(self.pos + pg.Vector2(20, 0).rotate(self.ang))
-        left_sens = Vec2.vint(self.pos + pg.Vector2(18, -8).rotate(self.ang))
-        right_sens = Vec2.vint(self.pos + pg.Vector2(18, 8).rotate(self.ang))
+        left_sens = Vec2.vint(self.pos + pg.Vector2(18, -8).rotate(self.ang)) # -9
+        right_sens = Vec2.vint(self.pos + pg.Vector2(18, 8).rotate(self.ang)) # 9
 
         if self.drawSurf.get_rect().collidepoint(mid_sens):
             mspos = (mid_sens[0]//PRATIO,mid_sens[1]//PRATIO)
@@ -77,7 +78,6 @@ class Ant(pg.sprite.Sprite):
         #pg.draw.circle(self.drawSurf, (200,0,200), left_sens, 1)
         #pg.draw.circle(self.drawSurf, (200,0,200), right_sens, 1)
 
-
         if self.mode == 0 and self.pos.distance_to(self.nest) > 21:
             self.mode = 1
 
@@ -85,7 +85,6 @@ class Ant(pg.sprite.Sprite):
             setAcolor = (0,0,100)
             if scaledown_pos != self.last_sdp and scaledown_pos[0] in range(0,self.pgSize[0]) and scaledown_pos[1] in range(0,self.pgSize[1]):
                 self.phero.img_array[scaledown_pos] += setAcolor
-                #self.phero.pixelID[scaledown_pos] = self.antID   # maybe each ant should have their own ID array
                 self.isMyTrail[scaledown_pos] = True
                 self.last_sdp = scaledown_pos
             if mid_result[1] > max(left_result[1], right_result[1]):
@@ -133,9 +132,9 @@ class Ant(pg.sprite.Sprite):
             elif right_result[2] > left_result[2] and right_isID: #and right_result[:2] == (0,0):
                 self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = .1
-            else:  # maybe first add ELSE FOLLOW OTHER TRAILS?
-                self.desireDir += pg.Vector2(self.nest - self.pos).normalize() * .08
-                wandrStr = .1   #pg.Vector2(self.desireDir + (1,0)).rotate(pg.math.Vector2.as_polar(self.nest - self.pos)[1])
+            #else:  # maybe first add ELSE FOLLOW OTHER TRAILS?
+            #    self.desireDir += pg.Vector2(self.nest - self.pos).normalize() * .08
+            #    wandrStr = .1   #pg.Vector2(self.desireDir + (1,0)).rotate(pg.math.Vector2.as_polar(self.nest - self.pos)[1])
 
         wallColor = (50,50,50)  # avoid walls of this color
         if left_GA_result == wallColor:
@@ -193,15 +192,9 @@ class PheroGrid():
         self.surfSize = (int(bigSize[0]/PRATIO), int(bigSize[1]/PRATIO))
         self.image = pg.Surface(self.surfSize).convert()
         self.img_array = np.array(pg.surfarray.array3d(self.image),dtype=float)#.astype(np.float64)
-        #self.pixelID = np.zeros(self.surfSize)
     def update(self, dt):
         self.img_array -= .2 * (60/FPS) * ((dt/10) * FPS) #[self.img_array > 0] # dt might not need FPS parts
         self.img_array = self.img_array.clip(0,255)
-        #self.pixelID[ (self.img_array == (0, 0, 0))[:, :, 0] ] = 0  # not sure if works, or worth it
-        #indices = (img_array == (0, 0, 0))[:, :, 0] # alternative in 2 lines
-        #pixelID[indices] = 0
-        #self.img_array[self.img_array < 1] = 0  # ensure no leftover floats <1
-        #self.img_array[self.img_array > 255] = 255  # ensures nothing over 255, replaced by clip
         pg.surfarray.blit_array(self.image, self.img_array)
         return self.image
 
@@ -212,7 +205,7 @@ class Food(pg.sprite.Sprite):
         self.image = pg.Surface((16, 16))
         self.image.fill(0)
         self.image.set_colorkey(0)
-        pg.draw.circle(self.image, [2,150,2], [8, 8], 4)
+        pg.draw.circle(self.image, [20,150,2], [8, 8], 4)
         self.rect = self.image.get_rect(center=pos)
     def pickup(self):
         self.kill()
@@ -249,6 +242,7 @@ def main():
 
     foodList = []
     foods = pg.sprite.Group()
+    font = pg.font.Font(None, 30)
     clock = pg.time.Clock()
     fpsChecker = 0
     # main loop
@@ -293,16 +287,14 @@ def main():
         pg.draw.circle(screen, [60,30,30], (nest[0],nest[1]+2), 12, 4)
         pg.draw.circle(screen, [70,40,40], nest, 16, 5)
 
-        pg.draw.rect(screen, (50,50,50), [900, 1, 50, 500]) # test wall
+        pg.draw.rect(screen, (50,50,50), [900, 0, 50, 500]) # test wall
 
         workers.draw(screen)
+
+        if SHOWFPS : screen.blit(font.render(str(int(clock.get_fps())), True, [0,200,0]), (8, 8))
+
         pg.display.update()
 
-        # Outputs framerate once per second
-        fpsChecker+=1  #fpsChecker = 0  # must go before main loop
-        if fpsChecker>=FPS:  # quick debug to see fps in terminal
-            print(round(clock.get_fps(),2)) #print((dt/10)*FPS)
-            fpsChecker=0
 
 if __name__ == '__main__':
     main()  # by Nik

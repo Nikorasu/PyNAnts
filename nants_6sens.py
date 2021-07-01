@@ -14,11 +14,11 @@ HEIGHT = 800            # default 800
 FPS = 60                # 48-90
 VSYNC = True            # limit frame rate to refresh rate
 PRATIO = 5              # Pixel Size for Pheromone grid, 5 is best
-SHOWFPS = True          # show framerate debug
 
 class Ant(pg.sprite.Sprite):
     def __init__(self, drawSurf, nest, pheroLayer):
         super().__init__()
+        #self.antID = antNum
         self.drawSurf = drawSurf
         self.curW, self.curH = self.drawSurf.get_size()
         self.pgSize = (int(self.curW/PRATIO), int(self.curH/PRATIO))
@@ -52,7 +52,8 @@ class Ant(pg.sprite.Sprite):
         mid_GA_result = left_GA_result = right_GA_result = [0,0,0]
         randAng = randint(0,360)
         accel = pg.Vector2(0,0)
-        foodColor = (20,150,2)  # color of food to look for
+        foodColor = (2,150,2)  # color of food to look for
+        pStrength = 80  # Pheromone strength, evaps slowly
         wandrStr = .12  # how random they walk around
         maxSpeed = 12  # 10-12 seems ok
         steerStr = 3  # 3 or 4, dono
@@ -60,23 +61,20 @@ class Ant(pg.sprite.Sprite):
         scaledown_pos = (int(self.pos.x/PRATIO), int(self.pos.y/PRATIO))
         #scaledown_pos = (int((self.pos.x/self.curW)*self.pgSize[0]), int((self.pos.y/self.curH)*self.pgSize[1]))
         # Get locations to check as sensor points, in pairs for better detection.
-        mid_sens = Vec2.vint(self.pos + pg.Vector2(20, 0).rotate(self.ang))
-        left_sens = Vec2.vint(self.pos + pg.Vector2(18, -8).rotate(self.ang)) # -9
-        right_sens = Vec2.vint(self.pos + pg.Vector2(18, 8).rotate(self.ang)) # 9
+        mid_sensL = Vec2.vint(self.pos + pg.Vector2(21, -3).rotate(self.ang))
+        mid_sensR = Vec2.vint(self.pos + pg.Vector2(21, 3).rotate(self.ang))
+        left_sens1 = Vec2.vint(self.pos + pg.Vector2(18, -14).rotate(self.ang))
+        left_sens2 = Vec2.vint(self.pos + pg.Vector2(16, -21).rotate(self.ang))
+        right_sens1 = Vec2.vint(self.pos + pg.Vector2(18, 14).rotate(self.ang))
+        right_sens2 = Vec2.vint(self.pos + pg.Vector2(16, 21).rotate(self.ang))
+        # May still need to adjust these sensor positions, to improve following.
 
-        if self.drawSurf.get_rect().collidepoint(mid_sens):
-            mspos = (mid_sens[0]//PRATIO,mid_sens[1]//PRATIO)
-            mid_result = self.phero.img_array[mspos]
-            mid_isID = self.isMyTrail[mspos]
-            mid_GA_result = self.drawSurf.get_at(mid_sens)[:3]
-        if self.drawSurf.get_rect().collidepoint(left_sens):
-            left_result, left_isID, left_GA_result = self.sensCheck(left_sens)
-        if self.drawSurf.get_rect().collidepoint(right_sens):
-            right_result, right_isID, right_GA_result = self.sensCheck(right_sens)
-
-        #pg.draw.circle(self.drawSurf, (200,0,200), mid_sens, 1)
-        #pg.draw.circle(self.drawSurf, (200,0,200), left_sens, 1)
-        #pg.draw.circle(self.drawSurf, (200,0,200), right_sens, 1)
+        if self.drawSurf.get_rect().collidepoint(mid_sensL) and self.drawSurf.get_rect().collidepoint(mid_sensR):
+            mid_result, mid_isID, mid_GA_result = self.sensCheck(mid_sensL, mid_sensR)
+        if self.drawSurf.get_rect().collidepoint(left_sens1) and self.drawSurf.get_rect().collidepoint(left_sens2):
+            left_result, left_isID, left_GA_result = self.sensCheck(left_sens1, left_sens2)
+        if self.drawSurf.get_rect().collidepoint(right_sens1) and self.drawSurf.get_rect().collidepoint(right_sens2):
+            right_result, right_isID, right_GA_result = self.sensCheck(right_sens1, right_sens2)
 
         if self.mode == 0 and self.pos.distance_to(self.nest) > 21:
             self.mode = 1
@@ -85,15 +83,16 @@ class Ant(pg.sprite.Sprite):
             setAcolor = (0,0,100)
             if scaledown_pos != self.last_sdp and scaledown_pos[0] in range(0,self.pgSize[0]) and scaledown_pos[1] in range(0,self.pgSize[1]):
                 self.phero.img_array[scaledown_pos] += setAcolor
+                #self.phero.pixelID[scaledown_pos] = self.antID   # maybe each ant should have their own ID array
                 self.isMyTrail[scaledown_pos] = True
                 self.last_sdp = scaledown_pos
-            if mid_result[1] > max(left_result[1], right_result[1]):
+            if mid_result[1] > max(left_result[1], right_result[1]): #and (mid_result[0],mid_result[2]) == (0,0):
                 self.desireDir += pg.Vector2(1,0).rotate(self.ang).normalize()
                 wandrStr = .1
-            elif left_result[1] > right_result[1]:
+            elif left_result[1] > right_result[1]: #and (left_result[0],left_result[2]) == (0,0):
                 self.desireDir += pg.Vector2(1,-2).rotate(self.ang).normalize() #left (0,-1)
                 wandrStr = .1
-            elif right_result[1] > left_result[1]:
+            elif right_result[1] > left_result[1]: #and (right_result[0],right_result[2]) == (0,0):
                 self.desireDir += pg.Vector2(1,2).rotate(self.ang).normalize() #right (0, 1)
                 wandrStr = .1
             if left_GA_result == foodColor and right_GA_result != foodColor :
@@ -138,25 +137,25 @@ class Ant(pg.sprite.Sprite):
 
         wallColor = (50,50,50)  # avoid walls of this color
         if left_GA_result == wallColor:
-            self.desireDir += pg.Vector2(0,2).rotate(self.ang) #.normalize()
+            self.desireDir += pg.Vector2(0,1).rotate(self.ang) #.normalize()
             wandrStr = .1
-            steerStr = 7
+            steerStr = 5
         elif right_GA_result == wallColor:
-            self.desireDir += pg.Vector2(0,-2).rotate(self.ang) #.normalize()
+            self.desireDir += pg.Vector2(0,-1).rotate(self.ang) #.normalize()
             wandrStr = .1
-            steerStr = 7
+            steerStr = 5
         elif mid_GA_result == wallColor:
-            self.desireDir = pg.Vector2(-2,0).rotate(self.ang) #.normalize()
-            maxSpeed = 4
+            self.desireDir += pg.Vector2(-2,0).rotate(self.ang) #.normalize()
+            maxSpeed = 5
             wandrStr = .1
-            steerStr = 7
+            steerStr = 5
 
         # Avoid edges
-        if not self.drawSurf.get_rect().collidepoint(left_sens) and self.drawSurf.get_rect().collidepoint(right_sens):
+        if not self.drawSurf.get_rect().collidepoint(left_sens2) and self.drawSurf.get_rect().collidepoint(right_sens2):
             self.desireDir += pg.Vector2(0,1).rotate(self.ang) #.normalize()
             wandrStr = .01
             steerStr = 5
-        elif not self.drawSurf.get_rect().collidepoint(right_sens) and self.drawSurf.get_rect().collidepoint(left_sens):
+        elif not self.drawSurf.get_rect().collidepoint(right_sens2) and self.drawSurf.get_rect().collidepoint(left_sens2):
             self.desireDir += pg.Vector2(0,-1).rotate(self.ang) #.normalize()
             wandrStr = .01
             steerStr = 5
@@ -181,20 +180,41 @@ class Ant(pg.sprite.Sprite):
         # actually update position
         self.rect.center = self.pos
 
-    def sensCheck(self, pos): #, pos2): # checks given points in Array, IDs, and pixels on screen.
-        sdpos = (int(pos[0]/PRATIO),int(pos[1]/PRATIO))
-        array_r = self.phero.img_array[sdpos]
-        ga_r = self.drawSurf.get_at(pos)[:3]
-        return array_r, self.isMyTrail[sdpos], ga_r
+    def sensCheck(self, pos1, pos2): # checks given points in Array, IDs, and pixels on screen.
+        sdpos1 = (int(pos1[0]/PRATIO),int(pos1[1]/PRATIO))
+        sdpos2 = (int(pos2[0]/PRATIO),int(pos2[1]/PRATIO))
+        #sdpos1 = (int((pos1[0]/self.curW)*self.pgSize[0]), int((pos1[1]/self.curH)*self.pgSize[1]))
+        #sdpos2 = (int((pos2[0]/self.curW)*self.pgSize[0]), int((pos2[1]/self.curH)*self.pgSize[1]))
+        array_r1 = self.phero.img_array[sdpos1]
+        array_r2 = self.phero.img_array[sdpos2]
+        array_result = (max(array_r1[0], array_r2[0]), max(array_r1[1], array_r2[1]), max(array_r1[2], array_r2[2]))
+
+        #is1ID = self.phero.pixelID[sdpos1] == self.antID
+        is1ID = self.isMyTrail[sdpos1]
+        #is2ID = self.phero.pixelID[sdpos2] == self.antID
+        is2ID = self.isMyTrail[sdpos2]
+        isID = is1ID or is2ID
+
+        ga_r1 = self.drawSurf.get_at(pos1)[:3]
+        ga_r2 = self.drawSurf.get_at(pos2)[:3]
+        ga_result = (max(ga_r1[0], ga_r2[0]), max(ga_r1[1], ga_r2[1]), max(ga_r1[2], ga_r2[2]))
+
+        return array_result, isID, ga_result
 
 class PheroGrid():
     def __init__(self, bigSize):
         self.surfSize = (int(bigSize[0]/PRATIO), int(bigSize[1]/PRATIO))
         self.image = pg.Surface(self.surfSize).convert()
         self.img_array = np.array(pg.surfarray.array3d(self.image),dtype=float)#.astype(np.float64)
+        #self.pixelID = np.zeros(self.surfSize)
     def update(self, dt):
         self.img_array -= .2 * (60/FPS) * ((dt/10) * FPS) #[self.img_array > 0] # dt might not need FPS parts
         self.img_array = self.img_array.clip(0,255)
+        #self.pixelID[ (self.img_array == (0, 0, 0))[:, :, 0] ] = 0  # not sure if works, or worth it
+        #indices = (img_array == (0, 0, 0))[:, :, 0] # alternative in 2 lines
+        #pixelID[indices] = 0
+        #self.img_array[self.img_array < 1] = 0  # ensure no leftover floats <1
+        #self.img_array[self.img_array > 255] = 255  # ensures nothing over 255, replaced by clip
         pg.surfarray.blit_array(self.image, self.img_array)
         return self.image
 
@@ -205,7 +225,7 @@ class Food(pg.sprite.Sprite):
         self.image = pg.Surface((16, 16))
         self.image.fill(0)
         self.image.set_colorkey(0)
-        pg.draw.circle(self.image, [20,150,2], [8, 8], 4)
+        pg.draw.circle(self.image, [2,150,2], [8, 8], 4)
         self.rect = self.image.get_rect(center=pos)
     def pickup(self):
         self.kill()
@@ -242,7 +262,6 @@ def main():
 
     foodList = []
     foods = pg.sprite.Group()
-    font = pg.font.Font(None, 30)
     clock = pg.time.Clock()
     fpsChecker = 0
     # main loop
@@ -271,7 +290,6 @@ def main():
         dt = clock.tick(FPS) / 100
 
         pheroImg = pheroLayer.update(dt)
-        pheroLayer.img_array[170:182,0:80] = (50,50,50)  # wall
 
         workers.update(dt)
 
@@ -280,7 +298,6 @@ def main():
         rescaled_img = pg.transform.scale(pheroImg, (cur_w, cur_h))
         pg.Surface.blit(screen, rescaled_img, (0,0))
 
-        #workers.update(dt)  # enable here to see debug dots
         foods.draw(screen)
 
         pg.draw.circle(screen, [40,10,10], (nest[0],nest[1]+6), 6, 3)
@@ -288,14 +305,16 @@ def main():
         pg.draw.circle(screen, [60,30,30], (nest[0],nest[1]+2), 12, 4)
         pg.draw.circle(screen, [70,40,40], nest, 16, 5)
 
-        #pg.draw.rect(screen, (50,50,50), [900, 0, 50, 500]) # test wall
+        pg.draw.rect(screen, (50,50,50), [900, 100, 50, 400]) # test wall
 
         workers.draw(screen)
-
-        if SHOWFPS : screen.blit(font.render(str(int(clock.get_fps())), True, [0,200,0]), (8, 8))
-
         pg.display.update()
 
+        # Outputs framerate once per second
+        fpsChecker+=1  #fpsChecker = 0  # must go before main loop
+        if fpsChecker>=FPS:  # quick debug to see fps in terminal
+            print(round(clock.get_fps(),2)) #print((dt/10)*FPS)
+            fpsChecker=0
 
 if __name__ == '__main__':
     main()  # by Nik
