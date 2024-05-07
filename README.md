@@ -29,6 +29,8 @@ If you have any suggestions for how to improve these, please contact me!
 For more information, and future updates,
 [see github page](https://github.com/Nikorasu/PyNAnts "PyNAnts").
 
+Currently working on an alternative [array-based terminal version](https://github.com/Nikorasu/NantArray).
+
 ---
 
         This program is free software: you can redistribute it and/or modify
